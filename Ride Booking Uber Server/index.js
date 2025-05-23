@@ -118,8 +118,10 @@ function startGrpcServer() {
     requestRide
   });
 
-  server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
-    console.log("gRPC server running on port 50051");
+  const PORT = process.env.PORT || 10000;
+
+  server.bindAsync(`0.0.0.0:${PORT}`, grpc.ServerCredentials.createInsecure(), () => {
+    console.log(`gRPC server running on port ${PORT}`);
     server.start();
   });
 }
