@@ -1,5 +1,3 @@
-const http = require('http');
-const path = require('path');
 var grpc = require('@grpc/grpc-js');
 var protoLoader = require('@grpc/proto-loader');
 
@@ -125,35 +123,21 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', (error) => {
   console.log(`HTTP health check server running on port ${HTTP_PORT}`);
 });
 
-// Start gRPC server
-function startGrpcServer() {
-  const server = new grpc.Server();
+function main() {
+  var server = new grpc.Server();
   server.addService(driver_proto.DriverService.service, {
-    driverLocation,
-    driverNewJob,
+    driverLocation: driverLocation,
+    driverNewJob: driverNewJob
   });
+
   server.addService(rider_proto.RiderService.service, {
     driverLocation: driverLocationRider,
-    requestRide,
+    requestRide: requestRide
   });
 
-  const PORT = process.env.PORT || 10000;
-  server.bindAsync(
-    `0.0.0.0:${PORT}`,
-    grpc.ServerCredentials.createInsecure(),
-    (error, port) => {
-      if (error) {
-        console.error('Failed to bind gRPC server:', error);
-        process.exit(1);
-      }
-      console.log(`gRPC server running on 0.0.0.0:${port}`);
-      server.start();
-    }
-  );
-}
-
-function main() {
-  startGrpcServer();
+  server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
+    server.start();
+  });
 }
 
 main();
