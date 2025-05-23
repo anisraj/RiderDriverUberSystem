@@ -13,6 +13,7 @@ import me.anisjamadar.grpc.GrpcConstant.COUNTDOWN_TIME_IN_SECONDS
 import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
 import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
 import me.anisjamadar.grpc.flows.FlowOfBookingResponse
+import me.anisjamadar.grpc.flows.FlowOfLocationResponse
 import rider.Rider.DriverLocationResponse
 import rider.Rider.RideRequest
 import rider.Rider.RideResponse
@@ -72,7 +73,9 @@ object GrpcHandler {
     fun getDriverLocationUpdates() {
         val responseObserver = object : StreamObserver<DriverLocationResponse> {
             override fun onNext(value: DriverLocationResponse) {
-                println("Driver location: ${value.latitude}, ${value.longitude}")
+                scope.launch {
+                    FlowOfLocationResponse.emitLocationUpdates(value.latitude, value.longitude)
+                }
             }
 
             override fun onError(t: Throwable?) {

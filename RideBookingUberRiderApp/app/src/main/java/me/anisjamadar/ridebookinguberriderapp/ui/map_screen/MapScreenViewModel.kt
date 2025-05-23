@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -24,6 +26,7 @@ import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant
 import me.anisjamadar.grpc.GrpcHandler
 import me.anisjamadar.grpc.flows.FlowOfBookingResponse
+import me.anisjamadar.grpc.flows.FlowOfLocationResponse
 import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.data.repository.RiderRepository
 import me.anisjamadar.ridebookinguberriderapp.utils.AcceptedRideStatus
@@ -92,7 +95,8 @@ class MapScreenViewModel @Inject constructor(
                             _rideStatus.value = RequestedRideStatus
                         }
                         GrpcConstant.DriverAction.ACCEPTED -> {
-                            _rideStatus.value = AcceptedRideStatus(0.0, 0.0)
+                            startObservingLocationUpdates()
+                            _rideStatus.value = AcceptedRideStatus
                         }
                         GrpcConstant.DriverAction.REJECTED -> {
                             _rideStatus.value = AllDriversBusyStatus
@@ -124,6 +128,17 @@ class MapScreenViewModel @Inject constructor(
             pickupLocation.value?.address ?: "",
             dropLocation.value?.address ?: ""
         )
+    }
+
+    private fun startObservingLocationUpdates() {
+        viewModelScope.launch {
+            FlowOfLocationResponse
+                .locationFlow
+                .collect {
+                    println("Logs of status : $it")
+                }
+        }
+        GrpcHandler.getDriverLocationUpdates()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -30,6 +30,7 @@ var rider_proto =
 let isDriverOnline = false;
 let currentDriverCall = null; 
 let currentRiderCall = null;  
+let currentRiderLocationStream = null;
 
 
 
@@ -39,10 +40,26 @@ function driverLocation(call) {
 
   call.on('data',function(request){
     console.log("Driver Location: "+request.latitude+" "+request.longitude);
+
+    if (currentRiderLocationStream) {
+      currentRiderLocationStream.write({
+        latitude: request.latitude,
+        longitude: request.longitude
+      });
+    }
+
   });
   call.on('end',function(){
     console.log("Driver is offline");
     isDriverOnline = false;
+    call.end();
+  });
+}
+
+function driverLocationRider(call) {
+  currentRiderLocationStream = call;
+  call.on('end',function(){
+    currentRiderLocationStream = null;
     call.end();
   });
 }
@@ -60,10 +77,6 @@ function driverNewJob(call) {
     currentDriverCall = null;
     call.end();
   });
-}
-
-function driverLocationRider() {
-  console.log("driverLocationRider");
 }
 
 function requestRide(call) {

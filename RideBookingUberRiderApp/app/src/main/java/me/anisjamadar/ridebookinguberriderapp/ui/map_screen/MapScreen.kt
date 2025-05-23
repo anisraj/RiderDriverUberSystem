@@ -103,7 +103,7 @@ fun MapScreen(
                 RequestedRideStatus -> {
                     RequestedRideView(viewModel)
                 }
-                is AcceptedRideStatus -> {
+                AcceptedRideStatus -> {
                     AcceptedRideView()
                 }
                 RejectedRideStatus -> {

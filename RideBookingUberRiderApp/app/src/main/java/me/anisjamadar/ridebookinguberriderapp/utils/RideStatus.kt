@@ -6,9 +6,7 @@ data object UnknownRideStatus : RideStatus()
 
 data object RequestedRideStatus : RideStatus()
 
-data class AcceptedRideStatus(
-    val latitude: Double, val longitude: Double
-) : RideStatus()
+data object AcceptedRideStatus : RideStatus()
 
 data object RejectedRideStatus : RideStatus()
 
