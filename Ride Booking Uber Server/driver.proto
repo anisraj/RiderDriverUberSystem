@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package driver;
+
+//driver service definition
+service DriverService {
+    //update location of driver
+    rpc DriverLocation (stream LocationRequest) returns (stream LocationResponse) {}
+
+    rpc DriverNewJob (stream NewJobRequest) returns (stream NewJobResponse) {}
+}
+
+//request message for driver location
+message LocationRequest {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+//response message for driver location
+message LocationResponse {
+    string response = 1;
+}
+
+//request message for new job
+message NewJobRequest {
+    int32 action = 1;
+}
+
+//response message for new job
+message NewJobResponse {
+    int32 action = 1;
+    string deliveryFrom = 2;
+    string deliveryTo = 3;
+    int32 time = 4;
+    double budget = 5;
+}
+

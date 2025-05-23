@@ -1,0 +1,31 @@
+package me.anisjamadar.ridebookinguberpartnerapp.utils
+
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
+import android.view.WindowManager
+import androidx.core.content.ContextCompat
+
+fun Context.hasLocationPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+}
+
+fun Context.hasNotificationPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.POST_NOTIFICATIONS
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+fun Activity.wakeUpWhenLock() {
+    val window = this.window
+    window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+}

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package rider;
+
+//rider service definition
+service RiderService {
+    //get location of driver
+    rpc DriverLocation (google.protobuf.Empty) returns (stream DriverLocationResponse) {}
+
+    //Send ride request and receive stream of driver actions
+    rpc RequestRide (RideRequest) returns (stream RideResponse) {}
+}
+
+//response message for driver location
+message DriverLocationResponse {
+    double latitude = 1;
+    double longitude = 2;
+}
+
+//message for ride request
+message RideRequest {
+    int32 time = 1;
+    double pickupLatitude = 2;
+    double pickupLongitude = 3;
+    double dropLatitude = 4;
+    double dropLongitude = 5;
+    string pickupAddress = 6;
+    string dropAddress = 7;
+}
+
+//response message for ride request
+message RideResponse {
+    int32 action = 1;
+}
