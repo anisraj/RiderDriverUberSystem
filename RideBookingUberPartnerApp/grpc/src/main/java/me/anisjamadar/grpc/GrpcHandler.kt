@@ -13,13 +13,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
+import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
 import me.anisjamadar.grpc.flows.FlowBookingAcknowledge
 import me.anisjamadar.grpc.model.BookingData
 
 object GrpcHandler {
-    private const val GRPC_HOST = "10.0.2.2"
-    private const val GRPC_PORT = 50051
-
     private var managedChannel: ManagedChannel? = null
     private lateinit var driverServiceGrpcStub: DriverServiceGrpc.DriverServiceStub
     private var locationRequestStreamObserver: StreamObserver<LocationRequest>? = null
