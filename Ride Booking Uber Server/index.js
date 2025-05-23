@@ -1,9 +1,7 @@
-var grpc = require('@grpc/grpc-js');
-var protoLoader = require('@grpc/proto-loader');
-
 var DRIVER_PROTO_PATH = __dirname+'/driver.proto';
 var RIDER_PROTO_PATH = __dirname+'/rider.proto';
-
+var grpc = require('@grpc/grpc-js');
+var protoLoader = require('@grpc/proto-loader');
 var driverPackageDefinition = protoLoader.loadSync(
     DRIVER_PROTO_PATH,
     {keepCase: true,
@@ -31,7 +29,9 @@ var rider_proto =
  
 let isDriverOnline = false;
 let currentDriverCall = null; 
-let currentRiderCall = null;
+let currentRiderCall = null;  
+
+
 
 function driverLocation(call) {
   console.log("Driver is online");
@@ -103,25 +103,7 @@ function requestRide(call) {
 
 }
 
-// HTTP health check server
-const httpServer = http.createServer((req, res) => {
-  if (req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('OK');
-  } else {
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
-  }
-});
 
-const HTTP_PORT = process.env.HTTP_PORT || 80;
-httpServer.listen(HTTP_PORT, '0.0.0.0', (error) => {
-  if (error) {
-    console.error('Failed to start HTTP health check server:', error);
-    process.exit(1);
-  }
-  console.log(`HTTP health check server running on port ${HTTP_PORT}`);
-});
 
 function main() {
   var server = new grpc.Server();
@@ -129,7 +111,6 @@ function main() {
     driverLocation: driverLocation,
     driverNewJob: driverNewJob
   });
-
   server.addService(rider_proto.RiderService.service, {
     driverLocation: driverLocationRider,
     requestRide: requestRide

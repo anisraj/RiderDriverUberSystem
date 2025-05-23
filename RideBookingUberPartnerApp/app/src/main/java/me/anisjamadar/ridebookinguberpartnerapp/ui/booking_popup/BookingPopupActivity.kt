@@ -1,11 +1,13 @@
 package me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -27,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -84,11 +88,7 @@ class BookingPopupActivity : ComponentActivity() {
                 putExtra(BUDGET, budget)
             }
         }
-
-        var mediaPlayer: MediaPlayer? = null
     }
-
-    private val viewModel: BookingPopupViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -105,7 +105,7 @@ class BookingPopupActivity : ComponentActivity() {
                         .fillMaxSize()
                 ) { innerPadding ->
                     BookingPopupScreen(
-                        viewModel,
+                        time,
                         deliveryFrom,
                         deliveryTo,
                         budget,
@@ -115,63 +115,37 @@ class BookingPopupActivity : ComponentActivity() {
                 }
             }
         }
-        setUpObservers()
         wakeUpWhenLock()
-        mediaPlayer = MediaPlayer.create(this, R.raw.alarm)
-        viewModel.startTimer(time)
-    }
-
-    private fun setUpObservers() {
-        lifecycleScope.launch {
-            viewModel.playSound.collectLatest {
-                if (it) {
-                    playSound()
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            viewModel
-                .finishPage
-                .collectLatest {
-                    if (it) {
-                        onFinish()
-                    }
-                }
-        }
-    }
-
-    private fun playSound() {
-        mediaPlayer?.start()
-    }
-
-    private fun onFinish() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-            }
-        }
-        finish()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.stop()
-            }
-        }
     }
 }
 
 @Composable
 fun BookingPopupScreen(
-    viewModel: BookingPopupViewModel,
+    time: Int,
     deliveryFrom: String,
     deliveryTo: String,
     budget: Double,
     modifier: Modifier
 ) {
+    val viewModel = hiltViewModel<BookingPopupViewModel>()
+    val finishPage by viewModel.finishPage.collectAsState()
+    val mediaPlayer = MediaPlayer.create(LocalContext.current, R.raw.alarm)
+
+    if (finishPage) {
+        LocalActivity.current?.finish()
+    }
+
+    DisposableEffect(Unit) {
+        viewModel.startTimer(time)
+        mediaPlayer.start()
+
+        onDispose {
+            if (mediaPlayer.isPlaying) {
+                mediaPlayer.stop()
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -367,5 +341,5 @@ fun ActionButtons(viewModel: BookingPopupViewModel) {
 )
 @Composable
 private fun BookingPopupPreview() {
-    BookingPopupScreen(BookingPopupViewModel(),"Pune", "Mumbai", 20.0, Modifier)
+    BookingPopupScreen(30,"Pune", "Mumbai", 20.0, Modifier)
 }

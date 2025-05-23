@@ -22,16 +22,12 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
     private val _timer = MutableStateFlow("20")
     val timer: StateFlow<String> = _timer.asStateFlow()
 
-    private val _playSound = MutableStateFlow(false)
-    val playSound: StateFlow<Boolean> = _playSound.asStateFlow()
-
     private val _finishPage = MutableStateFlow(false)
     val finishPage: StateFlow<Boolean> = _finishPage.asStateFlow()
 
     private var countDownTimer: CountDownTimer? = null
 
     fun startTimer(time: Int) {
-        _playSound.value = true
         countDownTimer = null
         countDownTimer = object : CountDownTimer(time * 1000L, 1000) {
             @SuppressLint("DefaultLocale")
@@ -54,7 +50,6 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
         countDownTimer?.cancel()
         countDownTimer = null
         finishPage()
-
     }
 
     fun updateBooking(action: Int) {
