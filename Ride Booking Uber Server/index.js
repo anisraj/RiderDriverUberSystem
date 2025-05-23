@@ -105,7 +105,7 @@ function requestRide(call) {
 
 }
 
-function startGrpcServer() {
+// HTTP health check server
 const httpServer = http.createServer((req, res) => {
   if (req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -116,7 +116,7 @@ const httpServer = http.createServer((req, res) => {
   }
 });
 
-const HTTP_PORT = process.env.HTTP_PORT || 8080;
+const HTTP_PORT = process.env.HTTP_PORT || 80;
 httpServer.listen(HTTP_PORT, '0.0.0.0', (error) => {
   if (error) {
     console.error('Failed to start HTTP health check server:', error);
@@ -124,6 +124,32 @@ httpServer.listen(HTTP_PORT, '0.0.0.0', (error) => {
   }
   console.log(`HTTP health check server running on port ${HTTP_PORT}`);
 });
+
+// Start gRPC server
+function startGrpcServer() {
+  const server = new grpc.Server();
+  server.addService(driver_proto.DriverService.service, {
+    driverLocation,
+    driverNewJob,
+  });
+  server.addService(rider_proto.RiderService.service, {
+    driverLocation: driverLocationRider,
+    requestRide,
+  });
+
+  const PORT = process.env.PORT || 10000;
+  server.bindAsync(
+    `0.0.0.0:${PORT}`,
+    grpc.ServerCredentials.createInsecure(),
+    (error, port) => {
+      if (error) {
+        console.error('Failed to bind gRPC server:', error);
+        process.exit(1);
+      }
+      console.log(`gRPC server running on 0.0.0.0:${port}`);
+      server.start();
+    }
+  );
 }
 
 function main() {
