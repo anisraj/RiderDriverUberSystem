@@ -1,6 +1,10 @@
 {
   "name": "grpc-examples",
   "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "@grpc/proto-loader": "^0.5.0",
     "async": "^1.5.2",
