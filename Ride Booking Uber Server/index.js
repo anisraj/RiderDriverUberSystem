@@ -126,19 +126,8 @@ function startGrpcServer() {
   });
 }
 
-function startHttpHealthServer() {
-  const port = process.env.PORT || 3000;
-  http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end("OK");
-  }).listen(port, () => {
-    console.log(`HTTP health check server running on port ${port}`);
-  });
-}
-
 function main() {
   startGrpcServer();
-  startHttpHealthServer();
 }
 
 main();
