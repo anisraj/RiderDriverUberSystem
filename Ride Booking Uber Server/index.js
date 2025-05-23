@@ -1,7 +1,11 @@
-var DRIVER_PROTO_PATH = __dirname+'/driver.proto';
-var RIDER_PROTO_PATH = __dirname+'/rider.proto';
+const http = require('http');
+const path = require('path');
 var grpc = require('@grpc/grpc-js');
 var protoLoader = require('@grpc/proto-loader');
+
+var DRIVER_PROTO_PATH = __dirname+'/driver.proto';
+var RIDER_PROTO_PATH = __dirname+'/rider.proto';
+
 var driverPackageDefinition = protoLoader.loadSync(
     DRIVER_PROTO_PATH,
     {keepCase: true,
@@ -29,9 +33,7 @@ var rider_proto =
  
 let isDriverOnline = false;
 let currentDriverCall = null; 
-let currentRiderCall = null;  
-
-
+let currentRiderCall = null;
 
 function driverLocation(call) {
   console.log("Driver is online");
@@ -105,22 +107,36 @@ function requestRide(call) {
 
 
 
-function main() {
-  var server = new grpc.Server();
+function startGrpcServer() {
+  const server = new grpc.Server();
   server.addService(driver_proto.DriverService.service, {
-    driverLocation: driverLocation,
-    driverNewJob: driverNewJob
+    driverLocation,
+    driverNewJob
   });
   server.addService(rider_proto.RiderService.service, {
     driverLocation: driverLocationRider,
-    requestRide: requestRide
+    requestRide
   });
 
-  const PORT = process.env.PORT || 10000;
-  server.bindAsync(`0.0.0.0:${PORT}`, grpc.ServerCredentials.createInsecure(), () => {
-    console.log(`gRPC server running on port ${PORT}`);
+  server.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
+    console.log("gRPC server running on port 50051");
     server.start();
   });
+}
+
+function startHttpHealthServer() {
+  const port = process.env.PORT || 3000;
+  http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end("OK");
+  }).listen(port, () => {
+    console.log(`HTTP health check server running on port ${port}`);
+  });
+}
+
+function main() {
+  startGrpcServer();
+  startHttpHealthServer();
 }
 
 main();
