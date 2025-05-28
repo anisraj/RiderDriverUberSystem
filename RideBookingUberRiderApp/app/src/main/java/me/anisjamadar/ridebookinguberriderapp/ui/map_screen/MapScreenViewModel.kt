@@ -9,6 +9,7 @@ import com.ola.mapsdk.model.OlaLatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,12 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant
 import me.anisjamadar.grpc.GrpcHandler
@@ -63,6 +64,12 @@ class MapScreenViewModel @Inject constructor(
 
     private val _progressValue = MutableStateFlow(0)
     val progressValue: StateFlow<Int> = _progressValue.asStateFlow()
+
+    private val _loadingTrigger = MutableStateFlow(false)
+    val loadingTrigger: StateFlow<Boolean> = _loadingTrigger.asStateFlow()
+
+    private val _driverLocation = MutableStateFlow<OlaLatLng?>(null)
+    val driverLocation: StateFlow<OlaLatLng?> = _driverLocation.asStateFlow()
 
     init {
         fetchEncodedPolyline()
@@ -130,12 +137,28 @@ class MapScreenViewModel @Inject constructor(
         )
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun startObservingLocationUpdates() {
         viewModelScope.launch {
             FlowOfLocationResponse
                 .locationFlow
+                .take(1)
+                .flatMapLatest {
+                    _loadingTrigger.value = true
+                    repository.getEncodedPolyline(
+                        "${it.first},${it.second}",
+                        "${_pickupLocation.value?.latitude},${_pickupLocation.value?.longitude}"
+                    )
+                }
+                .executePolylineFlow()
+        }
+
+        viewModelScope.launch {
+            FlowOfLocationResponse
+                .locationFlow
                 .collect {
-                    println("Logs of status : $it")
+                    println("getting driver location from server $it")
+                    _driverLocation.value = OlaLatLng(it.first, it.second)
                 }
         }
         GrpcHandler.getDriverLocationUpdates()
@@ -149,30 +172,13 @@ class MapScreenViewModel @Inject constructor(
                     it
                 }
                 .flatMapLatest {
+                    _loadingTrigger.value = true
                     repository.getEncodedPolyline(
                         "${_pickupLocation.value?.latitude},${_pickupLocation.value?.longitude}",
                         "${_dropLocation.value?.latitude},${_dropLocation.value?.longitude}"
                     )
                 }
-                .filter {
-                    !it.isNullOrEmpty()
-                }
-                .map { encodedPolyline ->
-                    PolylineUtils.decode(encodedPolyline!!, 5)
-                        .map {
-                            OlaLatLng(it.latitude(), it.longitude())
-                        }
-                }
-                .map {
-                    it as ArrayList<OlaLatLng>
-                }
-                .flowOn(Dispatchers.IO)
-                .catch {
-                    it.printStackTrace()
-                }
-                .collect {
-                    _polyline.value = it
-                }
+                .executePolylineFlow()
         }
     }
 
@@ -207,5 +213,29 @@ class MapScreenViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         GrpcHandler.stopGrpc()
+    }
+
+    private suspend fun Flow<String?>.executePolylineFlow() {
+        filter {
+            !it.isNullOrEmpty()
+        }
+        .map { encodedPolyline ->
+            PolylineUtils.decode(encodedPolyline!!, 5)
+                .map {
+                    OlaLatLng(it.latitude(), it.longitude())
+                }
+            }
+        .map {
+            it as ArrayList<OlaLatLng>
+        }
+        .flowOn(Dispatchers.IO)
+        .catch {
+            _loadingTrigger.value = false
+            it.printStackTrace()
+        }
+        .collect {
+            _polyline.value = it
+            _loadingTrigger.value = false
+        }
     }
 }

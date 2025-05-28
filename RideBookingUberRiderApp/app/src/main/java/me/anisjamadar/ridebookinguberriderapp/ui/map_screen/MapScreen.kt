@@ -64,6 +64,7 @@ import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.R
 import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
+import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowLoading
 import me.anisjamadar.ridebookinguberriderapp.utils.AcceptedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversBusyStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversOfflineStatus
@@ -81,6 +82,7 @@ fun MapScreen(
 ) {
     val viewModel = hiltViewModel<MapScreenViewModel>()
     val rideStatus by viewModel.rideStatus.collectAsStateWithLifecycle()
+    val loadingTrigger by viewModel.loadingTrigger.collectAsStateWithLifecycle()
 
     Scaffold { padding ->
         Box(
@@ -89,6 +91,9 @@ fun MapScreen(
                 .padding(padding),
             contentAlignment = Alignment.BottomCenter
         ) {
+            if (loadingTrigger) {
+                ShowLoading()
+            }
             OlaMapView(
                 viewModel
             )
@@ -135,12 +140,21 @@ fun MapScreen(
 fun OlaMapView(viewModel: MapScreenViewModel) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
     var permissionsGranted by remember { mutableStateOf(false) }
+
     var polyline by remember { mutableStateOf<Polyline?>(null) }
+
     var pickupMarker by remember { mutableStateOf<Marker?>(null) }
     var dropMarker by remember { mutableStateOf<Marker?>(null) }
+    var driverMarker by remember { mutableStateOf<Marker?>(null) }
+
+    var previousLatLong by remember { mutableStateOf<OlaLatLng?>(null) }
+
     var map by remember { mutableStateOf<OlaMap?>(null) }
+
     var isMapReady by remember { mutableStateOf(false) }
+
     val mapView by remember {
         mutableStateOf(OlaMapView(context).also {
             it.getMap(
@@ -206,6 +220,34 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
 
             polyline = map?.addPolyline(polylineOptions)
             map?.easeCamera(olaCameraUpdate, 1000)
+        }
+    }
+
+    val driverLocation by viewModel.driverLocation.collectAsStateWithLifecycle()
+    LaunchedEffect(driverLocation, isMapReady) {
+        println("driver marker in le")
+        driverLocation?.let { currentLatLong ->
+            if (isMapReady) {
+                println("driver marker in isMapReady")
+                driverMarker?.let {
+                    println("driver marker in driverMarker")
+                    val from = previousLatLong ?: currentLatLong
+                    val to = currentLatLong
+                    //val bearing = computeBearing(from, to)
+                    //it.setPosition(to)
+                } ?: {
+                    println("driver marker in driverMarker else")
+                    val markerOptions = OlaMarkerOptions.Builder()
+                        .setMarkerId("driver_marker")
+                        .setPosition(currentLatLong)
+                        .setIsIconClickable(false)
+                        .setIconIntRes(R.drawable.ic_car)
+                        .setIconRotation(0f)
+                        .setIsAnimationEnable(true)
+                        .build()
+                    driverMarker = map?.addMarker(markerOptions)
+                }
+            }
         }
     }
 
