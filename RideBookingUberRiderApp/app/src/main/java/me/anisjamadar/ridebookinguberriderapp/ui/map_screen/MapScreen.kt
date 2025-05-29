@@ -62,7 +62,6 @@ import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant.COUNTDOWN_TIME_IN_SECONDS
 import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.R
-import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowLoading
 import me.anisjamadar.ridebookinguberriderapp.utils.AcceptedRideStatus
@@ -70,10 +69,14 @@ import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversBusyStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversOfflineStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.ArrivedAtPickupStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.CompletedRideStatus
+import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import me.anisjamadar.ridebookinguberriderapp.utils.RejectedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.RequestedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.StartedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.UnknownRideStatus
+import kotlin.math.abs
+import kotlin.math.atan
+
 
 @Composable
 fun MapScreen(
@@ -225,28 +228,20 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
 
     val driverLocation by viewModel.driverLocation.collectAsStateWithLifecycle()
     LaunchedEffect(driverLocation, isMapReady) {
-        println("driver marker in le")
         driverLocation?.let { currentLatLong ->
             if (isMapReady) {
-                println("driver marker in isMapReady")
-                driverMarker?.let {
-                    println("driver marker in driverMarker")
-                    val from = previousLatLong ?: currentLatLong
-                    val to = currentLatLong
-                    //val bearing = computeBearing(from, to)
-                    //it.setPosition(to)
-                } ?: {
-                    println("driver marker in driverMarker else")
-                    val markerOptions = OlaMarkerOptions.Builder()
-                        .setMarkerId("driver_marker")
-                        .setPosition(currentLatLong)
-                        .setIsIconClickable(false)
-                        .setIconIntRes(R.drawable.ic_car)
-                        .setIconRotation(0f)
-                        .setIsAnimationEnable(true)
-                        .build()
-                    driverMarker = map?.addMarker(markerOptions)
-                }
+                dropMarker?.removeMarker()
+                val from = previousLatLong ?: currentLatLong
+                val markerOptions = OlaMarkerOptions.Builder()
+                    .setMarkerId("driver_marker")
+                    .setPosition(currentLatLong)
+                    .setIsIconClickable(false)
+                    .setIconIntRes(R.drawable.ic_car)
+                    .setIconRotation(getRotation(from, currentLatLong))
+                    .setIsAnimationEnable(true)
+                    .build()
+                driverMarker = map?.addMarker(markerOptions)
+                previousLatLong = currentLatLong
             }
         }
     }
@@ -697,6 +692,28 @@ fun DriversOfflineView(viewModel: MapScreenViewModel) {
             Text("OK")
         }
     }
+}
+
+fun getRotation(start: OlaLatLng, end: OlaLatLng): Float {
+    val latDifference: Double = abs(start.latitude - end.latitude)
+    val lngDifference: Double = abs(start.longitude - end.longitude)
+    var rotation = -1F
+    when {
+        start.latitude < end.latitude && start.longitude < end.longitude -> {
+            rotation = Math.toDegrees(atan(lngDifference / latDifference)).toFloat()
+        }
+        start.latitude >= end.latitude && start.longitude < end.longitude -> {
+            rotation = (90 - Math.toDegrees(atan(lngDifference / latDifference)) + 90).toFloat()
+        }
+        start.latitude >= end.latitude && start.longitude >= end.longitude -> {
+            rotation = (Math.toDegrees(atan(lngDifference / latDifference)) + 180).toFloat()
+        }
+        start.latitude < end.latitude && start.longitude >= end.longitude -> {
+            rotation =
+                (90 - Math.toDegrees(atan(lngDifference / latDifference)) + 270).toFloat()
+        }
+    }
+    return rotation
 }
 
 const val FOR_PICKUP = "pickup"

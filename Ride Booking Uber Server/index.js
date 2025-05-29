@@ -1,7 +1,9 @@
-var DRIVER_PROTO_PATH = __dirname+'/driver.proto';
-var RIDER_PROTO_PATH = __dirname+'/rider.proto';
 var grpc = require('@grpc/grpc-js');
 var protoLoader = require('@grpc/proto-loader');
+
+var DRIVER_PROTO_PATH = __dirname+'/driver.proto';
+var RIDER_PROTO_PATH = __dirname+'/rider.proto';
+
 var driverPackageDefinition = protoLoader.loadSync(
     DRIVER_PROTO_PATH,
     {keepCase: true,
@@ -41,7 +43,7 @@ function driverLocation(call) {
   call.on('data',function(request){
     console.log("Driver Location: "+request.latitude+" "+request.longitude);
 
-    if (currentRiderLocationStream) {
+    if (currentRiderLocationStream != null) {
       currentRiderLocationStream.write({
         latitude: request.latitude,
         longitude: request.longitude
@@ -54,6 +56,10 @@ function driverLocation(call) {
     isDriverOnline = false;
     call.end();
   });
+
+  call.on('error', function(err) {
+    console.error("Driver location stream error:", err);
+  });
 }
 
 function driverLocationRider(call) {
@@ -62,12 +68,16 @@ function driverLocationRider(call) {
     currentRiderLocationStream = null;
     call.end();
   });
+  call.on('error', function(err) {
+    console.error("Rider location stream error:", err);
+  });
 }
 
 function driverNewJob(call) {
   currentDriverCall = call;
 
   call.on('data', (request) => {
+    console.log("driverNewJob action received:", request);
     currentRiderCall.write({
       action: request.action
     });
@@ -76,6 +86,10 @@ function driverNewJob(call) {
   call.on('end',function(){
     currentDriverCall = null;
     call.end();
+  });
+
+  call.on('error', function(err) {
+    console.error("Driver new job stream error:", err);
   });
 }
 
@@ -93,7 +107,6 @@ function requestRide(call) {
 
   const rideRequest = call.request;
 
-  // Simulate a ride being offered to the driver
   console.log(`Forwarding ride request to driver: lat=${rideRequest.pickupAddress}, long=${rideRequest.dropAddress}, time=${rideRequest.time}`);
 
   // Send ride request to driver stream
@@ -115,8 +128,6 @@ function requestRide(call) {
   });
 
 }
-
-
 
 function main() {
   var server = new grpc.Server();
