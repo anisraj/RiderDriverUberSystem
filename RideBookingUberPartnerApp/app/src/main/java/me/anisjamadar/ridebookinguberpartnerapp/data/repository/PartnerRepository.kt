@@ -18,4 +18,12 @@ class PartnerRepository @Inject constructor(
             Pair(it.results.first().name ?: "Address not found", it.results.first().formattedAddress ?: "Address not found")
         }
     }
+
+    fun getEncodedPolyline(origin: String, destination: String): Flow<String?> {
+        return flow {
+            emit(networkService.getEncodedPolyline(origin, destination))
+        }.map {
+            it.routes.firstOrNull()?.overviewPolyline
+        }
+    }
 }
