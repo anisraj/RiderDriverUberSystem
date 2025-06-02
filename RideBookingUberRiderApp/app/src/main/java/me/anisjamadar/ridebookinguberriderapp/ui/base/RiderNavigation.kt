@@ -4,15 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.ui.map_screen.FOR_DROP
 import me.anisjamadar.ridebookinguberriderapp.ui.map_screen.FOR_PICKUP
 import me.anisjamadar.ridebookinguberriderapp.ui.map_screen.MapScreen
-import me.anisjamadar.ridebookinguberriderapp.ui.location_search.LATITUDE
-import me.anisjamadar.ridebookinguberriderapp.ui.location_search.LOCATION_FOR
-import me.anisjamadar.ridebookinguberriderapp.ui.location_search.LONGITUDE
 import me.anisjamadar.ridebookinguberriderapp.ui.location_search.LocationSearchScreen
-import me.anisjamadar.ridebookinguberriderapp.ui.location_search.MAIN_TEXT
+import me.anisjamadar.ridebookinguberriderapp.ui.main.MainViewModel
 
 sealed class Route(val name: String) {
     data object Main : Route("main")
@@ -21,27 +17,16 @@ sealed class Route(val name: String) {
 }
 
 @Composable
-fun RiderNavHost() {
+fun RiderNavHost(mainViewModel: MainViewModel) {
     val navController = rememberNavController()
 
     NavHost(
         navController = navController,
         startDestination = Route.Main.name
     ) {
-        composable(route = Route.Main.name) { entry ->
-            val savedStateHandle = entry.savedStateHandle
-            val locationFor = savedStateHandle.get<String>(LOCATION_FOR)
-            val mainText = savedStateHandle.get<String>(MAIN_TEXT)
-            val latitude = savedStateHandle.get<Double>(LATITUDE)
-            val longitude = savedStateHandle.get<Double>(LONGITUDE)
-
+        composable(route = Route.Main.name) {
             MapScreen(
-                LocationData(
-                    locationFor = locationFor,
-                    address = mainText,
-                    latitude = latitude,
-                    longitude = longitude
-                ),
+                mainViewModel,
                 onLocationSearchClick = { screenFor ->
                     if (screenFor == FOR_PICKUP) {
                         navController.navigate(Route.LocationSearchForPickup.name)
@@ -53,7 +38,7 @@ fun RiderNavHost() {
         }
         composable(Route.LocationSearchForPickup.name) {
             LocationSearchScreen(
-                navController = navController,
+                mainViewModel = mainViewModel,
                 locationFor = FOR_PICKUP,
                 onBackClick = {
                     navController.popBackStack()
@@ -63,7 +48,7 @@ fun RiderNavHost() {
 
         composable(Route.LocationSearchForDrop.name) {
             LocationSearchScreen(
-                navController = navController,
+                mainViewModel = mainViewModel,
                 locationFor = FOR_DROP,
                 onBackClick = {
                     navController.popBackStack()

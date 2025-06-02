@@ -11,11 +11,11 @@ import javax.inject.Singleton
 class PartnerRepository @Inject constructor(
     private val networkService: NetworkService
 ) {
-    fun getAddressByReverseGeocode(origin: String, destination: String): Flow<String?> {
+    fun getAddressByReverseGeocode(latlng: String): Flow<Pair<String, String>> {
         return flow {
-            emit(networkService.getAddressByReverseGeocode(origin, destination))
+            emit(networkService.getAddressByReverseGeocode(latlng))
         }.map {
-            it.results.first().formattedAddress
+            Pair(it.results.first().name ?: "Address not found", it.results.first().formattedAddress ?: "Address not found")
         }
     }
 }

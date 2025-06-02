@@ -61,7 +61,11 @@ class LocationService : Service() {
                         deliveryFrom = it.deliveryFrom,
                         deliveryTo = it.deliveryTo,
                         time = it.time,
-                        budget = it.budget
+                        budget = it.budget,
+                        ridePickupLatitude = it.ridePickupLatitude,
+                        ridePickupLongitude = it.ridePickupLongitude,
+                        rideDropLatitude = it.rideDropLatitude,
+                        rideDropLongitude = it.rideDropLongitude
                     )
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     startActivity(intent)

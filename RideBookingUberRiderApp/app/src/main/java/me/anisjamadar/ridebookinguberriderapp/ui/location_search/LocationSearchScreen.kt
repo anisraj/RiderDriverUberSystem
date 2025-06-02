@@ -41,17 +41,19 @@ import androidx.navigation.compose.rememberNavController
 import com.ola.maps.sdk.model.places.response.AutocompleteResponse
 import com.ola.maps.sdk.model.places.response.Predictions
 import me.anisjamadar.ridebookinguberriderapp.R
+import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowError
 import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowLoading
 import me.anisjamadar.ridebookinguberriderapp.ui.base.UiState
+import me.anisjamadar.ridebookinguberriderapp.ui.main.MainViewModel
 import me.anisjamadar.ridebookinguberriderapp.ui.map_screen.FOR_PICKUP
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationSearchScreen(
+    mainViewModel: MainViewModel,
     onBackClick: () -> Unit,
-    locationFor: String,
-    navController: NavHostController
+    locationFor: String
 ) {
     val viewModel = hiltViewModel<LocationSearchViewModel>()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,7 +118,7 @@ fun LocationSearchScreen(
                 }
             )
 
-            LocationSearchContent(uiState, locationFor, navController)
+            LocationSearchContent(uiState, locationFor, mainViewModel, onBackClick)
         }
     }
 }
@@ -125,7 +127,8 @@ fun LocationSearchScreen(
 fun LocationSearchContent(
     uiState: UiState<AutocompleteResponse>,
     locationFor: String,
-    navController: NavHostController
+    mainViewModel: MainViewModel,
+    onBackClick: () -> Unit
 ) {
     when (uiState) {
         is UiState.Loading -> {
@@ -137,7 +140,7 @@ fun LocationSearchContent(
         }
 
         is UiState.Success -> {
-            LocationsList(uiState.data.predictions, locationFor, navController)
+            LocationsList(uiState.data.predictions, locationFor, mainViewModel, onBackClick)
         }
 
         else -> {
@@ -150,7 +153,8 @@ fun LocationSearchContent(
 fun LocationsList(
     predictions: ArrayList<Predictions>,
     locationFor: String,
-    navController: NavHostController
+    mainViewModel: MainViewModel,
+    onBackClick: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -161,7 +165,7 @@ fun LocationsList(
         )
     ) {
         items(predictions, key = { prediction -> prediction.placeId ?: Unit }) { item ->
-            LocationItemLayout(item, locationFor, navController)
+            LocationItemLayout(item, locationFor, mainViewModel, onBackClick)
         }
     }
 }
@@ -170,7 +174,8 @@ fun LocationsList(
 fun LocationItemLayout(
     prediction: Predictions,
     locationFor: String,
-    navController: NavHostController
+    mainViewModel: MainViewModel,
+    onBackClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -178,19 +183,22 @@ fun LocationItemLayout(
             .fillMaxWidth()
             .height(85.dp)
             .clickable {
-                navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set(LOCATION_FOR, locationFor)
-                navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set(MAIN_TEXT, prediction.structuredFormatting?.mainText)
-                navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set(LATITUDE, prediction.geometry?.location?.lat)
-                navController.previousBackStackEntry
-                    ?.savedStateHandle
-                    ?.set(LONGITUDE, prediction.geometry?.location?.lng)
-                navController.popBackStack()
+                if (locationFor == FOR_PICKUP) {
+                    mainViewModel.updatePickupLocation(LocationData(
+                        locationFor = locationFor,
+                        address = prediction.structuredFormatting?.mainText,
+                        latitude = prediction.geometry?.location?.lat,
+                        longitude = prediction.geometry?.location?.lng
+                    ))
+                } else {
+                    mainViewModel.updateDropLocation(LocationData(
+                        locationFor = locationFor,
+                        address = prediction.structuredFormatting?.mainText,
+                        latitude = prediction.geometry?.location?.lat,
+                        longitude = prediction.geometry?.location?.lng
+                    ))
+                }
+                onBackClick.invoke()
             },
         horizontalArrangement = Arrangement.spacedBy(
             space = 16.dp,
@@ -227,14 +235,3 @@ fun LocationItemLayout(
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-private fun LocationSearchScreenPreview() {
-    LocationItemLayout(Predictions(), FOR_PICKUP, rememberNavController())
-}
-
-const val MAIN_TEXT = "main_text"
-const val LATITUDE = "latitude"
-const val LONGITUDE = "longitude"
-const val LOCATION_FOR = "location_for"

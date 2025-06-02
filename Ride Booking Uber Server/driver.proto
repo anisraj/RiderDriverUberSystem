@@ -31,7 +31,11 @@ message NewJobResponse {
     int32 action = 1;
     string deliveryFrom = 2;
     string deliveryTo = 3;
-    int32 time = 4;
-    double budget = 5;
+    double ridePickupLatitude = 4;
+    double ridePickupLongitude = 5;
+    double rideDropLatitude = 6;
+    double rideDropLongitude = 7;
+    int32 time = 8;
+    double budget = 9;
 }
 

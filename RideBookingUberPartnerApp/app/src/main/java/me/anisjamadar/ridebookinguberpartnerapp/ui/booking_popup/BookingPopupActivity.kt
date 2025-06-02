@@ -1,6 +1,5 @@
 package me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
@@ -10,7 +9,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +28,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,11 +42,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import me.anisjamadar.locationsharingapplication.R
+import me.anisjamadar.ridebookinguberpartnerapp.ui.main.MainActivity
 import me.anisjamadar.ridebookinguberpartnerapp.utils.wakeUpWhenLock
 import me.anisjamadar.ridebookinguberpartnerapp.ui.theme.LocationSharingApplicationTheme
 
@@ -68,24 +64,48 @@ class BookingPopupActivity : ComponentActivity() {
     private val budget: Double
         get() = checkNotNull(intent.getDoubleExtra(BUDGET, 0.0))
 
+    private val ridePickupLatitude: Double
+        get() = checkNotNull(intent.getDoubleExtra(RIDE_PICKUP_LATITUDE, 0.0))
+
+    private val ridePickupLongitude: Double
+        get() = checkNotNull(intent.getDoubleExtra(RIDE_PICKUP_LONGITUDE, 0.0))
+
+    private val rideDropLatitude: Double
+        get() = checkNotNull(intent.getDoubleExtra(RIDE_DROP_LATITUDE, 0.0))
+
+    private val rideDropLongitude: Double
+        get() = checkNotNull(intent.getDoubleExtra(RIDE_DROP_LONGITUDE, 0.0))
+
     companion object {
         private const val DELIVERY_FROM = "delivery_from"
         private const val DELIVERY_TO = "delivery_to"
         private const val TIME = "time"
         private const val BUDGET = "budget"
+        private const val RIDE_PICKUP_LATITUDE = "rider_pickup_latitude"
+        private const val RIDE_PICKUP_LONGITUDE = "rider_pickup_longitude"
+        private const val RIDE_DROP_LATITUDE = "rider_drop_latitude"
+        private const val RIDE_DROP_LONGITUDE = "rider_drop_longitude"
 
         fun start(
             context: Context,
             deliveryFrom: String,
             deliveryTo: String,
             time: Int,
-            budget: Double
+            budget: Double,
+            ridePickupLatitude: Double,
+            ridePickupLongitude: Double,
+            rideDropLatitude: Double,
+            rideDropLongitude: Double
         ): Intent {
             return Intent(context, BookingPopupActivity::class.java).apply {
                 putExtra(DELIVERY_FROM, deliveryFrom)
                 putExtra(DELIVERY_TO, deliveryTo)
                 putExtra(TIME, time)
                 putExtra(BUDGET, budget)
+                putExtra(RIDE_PICKUP_LATITUDE, ridePickupLatitude)
+                putExtra(RIDE_PICKUP_LONGITUDE, ridePickupLongitude)
+                putExtra(RIDE_DROP_LATITUDE, rideDropLatitude)
+                putExtra(RIDE_DROP_LONGITUDE, rideDropLongitude)
             }
         }
     }
@@ -109,6 +129,10 @@ class BookingPopupActivity : ComponentActivity() {
                         deliveryFrom,
                         deliveryTo,
                         budget,
+                        ridePickupLatitude,
+                        ridePickupLongitude,
+                        rideDropLatitude,
+                        rideDropLongitude,
                         modifier = Modifier
                             .padding(innerPadding)
                     )
@@ -125,11 +149,30 @@ fun BookingPopupScreen(
     deliveryFrom: String,
     deliveryTo: String,
     budget: Double,
+    ridePickupLatitude: Double,
+    ridePickupLongitude: Double,
+    rideDropLatitude: Double,
+    rideDropLongitude: Double,
     modifier: Modifier
 ) {
     val viewModel = hiltViewModel<BookingPopupViewModel>()
-    val finishPage by viewModel.finishPage.collectAsState()
+    val finishPage by viewModel.finishPage.collectAsStateWithLifecycle()
+    val startMain by viewModel.startMain.collectAsStateWithLifecycle()
     val mediaPlayer = MediaPlayer.create(LocalContext.current, R.raw.alarm)
+
+    if (startMain) {
+        LocalActivity.current?.let {
+            val intent = MainActivity.start(
+                it,
+                ridePickupLatitude,
+                ridePickupLongitude,
+                rideDropLatitude,
+                rideDropLongitude
+            )
+            it.startActivity(intent)
+            it.finish()
+        }
+    }
 
     if (finishPage) {
         LocalActivity.current?.finish()
@@ -245,8 +288,8 @@ fun ShowAddress(deliveryAddress: String, addressType: Int) {
 
 @Composable
 fun TimerLayout(viewModel: BookingPopupViewModel) {
-    val progress by viewModel.progressValue.collectAsState()
-    val timerText by viewModel.timer.collectAsState()
+    val progress by viewModel.progressValue.collectAsStateWithLifecycle()
+    val timerText by viewModel.timer.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -341,5 +384,5 @@ fun ActionButtons(viewModel: BookingPopupViewModel) {
 )
 @Composable
 private fun BookingPopupPreview() {
-    BookingPopupScreen(30,"Pune", "Mumbai", 20.0, Modifier)
+    BookingPopupScreen(30,"Pune", "Mumbai", 20.0, 0.0, 0.0, 0.0, 0.0, Modifier)
 }

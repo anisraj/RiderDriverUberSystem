@@ -104,7 +104,16 @@ object GrpcHandler {
 
     private fun handleBooking(value: NewJobResponse) {
         scope.launch {
-            FlowBookingAcknowledge.emitBooking(BookingData(value.deliveryFrom, value.deliveryTo, value.time, value.budget))
+            FlowBookingAcknowledge.emitBooking(BookingData(
+                value.deliveryFrom,
+                value.deliveryTo,
+                value.time,
+                value.budget,
+                value.ridePickupLatitude,
+                value.ridePickupLongitude,
+                value.rideDropLatitude,
+                value.rideDropLongitude
+            ))
         }
     }
 }

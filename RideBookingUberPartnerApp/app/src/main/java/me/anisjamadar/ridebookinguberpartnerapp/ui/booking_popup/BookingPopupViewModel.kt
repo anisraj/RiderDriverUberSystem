@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import me.anisjamadar.grpc.GrpcConstant
 import me.anisjamadar.grpc.GrpcHandler
 import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.LocationService
 import javax.inject.Inject
@@ -24,6 +25,9 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
 
     private val _finishPage = MutableStateFlow(false)
     val finishPage: StateFlow<Boolean> = _finishPage.asStateFlow()
+
+    private val _startMain = MutableStateFlow(false)
+    val startMain: StateFlow<Boolean> = _startMain.asStateFlow()
 
     private var countDownTimer: CountDownTimer? = null
 
@@ -61,7 +65,11 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
                     }
                 }
         }
-        finishPage()
+        if (action == GrpcConstant.DriverAction.ACCEPTED.ordinal) {
+            _startMain.value = true
+        } else {
+            finishPage()
+        }
     }
 
     private fun finishPage() {

@@ -114,6 +114,10 @@ function requestRide(call) {
     action: 1,
     deliveryFrom: rideRequest.pickupAddress,
     deliveryTo: rideRequest.dropAddress,
+    ridePickupLatitude: rideRequest.pickupLatitude,
+    ridePickupLongitude: rideRequest.pickupLongitude,
+    rideDropLatitude: rideRequest.dropLatitude,
+    rideDropLongitude: rideRequest.dropLongitude,
     time: rideRequest.time,
     budget: 500 
   });

@@ -1,8 +1,10 @@
 package me.anisjamadar.ridebookinguberriderapp.ui.map_screen
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +66,7 @@ import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.R
 import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowLoading
+import me.anisjamadar.ridebookinguberriderapp.ui.main.MainViewModel
 import me.anisjamadar.ridebookinguberriderapp.utils.AcceptedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversBusyStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversOfflineStatus
@@ -80,12 +83,12 @@ import kotlin.math.atan
 
 @Composable
 fun MapScreen(
-    locationData: LocationData?,
+    mainViewModel: MainViewModel,
     onLocationSearchClick: (String) -> Unit
 ) {
     val viewModel = hiltViewModel<MapScreenViewModel>()
     val rideStatus by viewModel.rideStatus.collectAsStateWithLifecycle()
-    val loadingTrigger by viewModel.loadingTrigger.collectAsStateWithLifecycle()
+    val loadingTrigger by mainViewModel.loadingTrigger.collectAsStateWithLifecycle()
 
     Scaffold { padding ->
         Box(
@@ -98,13 +101,14 @@ fun MapScreen(
                 ShowLoading()
             }
             OlaMapView(
+                mainViewModel,
                 viewModel
             )
             when(rideStatus) {
                 UnknownRideStatus -> {
                     FindTripView(
                         viewModel,
-                        locationData,
+                        mainViewModel,
                         onLocationSearchClick
                     )
                 }
@@ -112,19 +116,21 @@ fun MapScreen(
                     RequestedRideView(viewModel)
                 }
                 AcceptedRideStatus -> {
+                    mainViewModel.drawDriverToRiderPolyline()
                     AcceptedRideView()
                 }
                 RejectedRideStatus -> {
-
+                    DriversBusyView(viewModel)
                 }
                 ArrivedAtPickupStatus -> {
-
+                    DriverAtPickupView()
                 }
                 StartedRideStatus -> {
-
+                    mainViewModel.drawOriginToDestPolyline()
+                    StartedRideView()
                 }
                 CompletedRideStatus -> {
-
+                    RideCompletedView(mainViewModel, viewModel)
                 }
                 AllDriversBusyStatus -> {
                     DriversBusyView(viewModel)
@@ -140,7 +146,7 @@ fun MapScreen(
 
 @SuppressLint("MissingPermission")
 @Composable
-fun OlaMapView(viewModel: MapScreenViewModel) {
+fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -174,7 +180,7 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
         })
     }
 
-    val polylineData by viewModel.polyline.collectAsStateWithLifecycle()
+    val polylineData by mainViewModel.polyline.collectAsStateWithLifecycle()
     LaunchedEffect(polylineData, isMapReady) {
         if (polylineData.isNotEmpty()) {
             polyline?.removePolyline()
@@ -223,26 +229,33 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
 
             polyline = map?.addPolyline(polylineOptions)
             map?.easeCamera(olaCameraUpdate, 1000)
+        } else {
+            polyline?.removePolyline()
+            pickupMarker?.removeMarker()
+            dropMarker?.removeMarker()
         }
     }
 
     val driverLocation by viewModel.driverLocation.collectAsStateWithLifecycle()
     LaunchedEffect(driverLocation, isMapReady) {
-        driverLocation?.let { currentLatLong ->
-            if (isMapReady) {
-                dropMarker?.removeMarker()
-                val from = previousLatLong ?: currentLatLong
-                val markerOptions = OlaMarkerOptions.Builder()
-                    .setMarkerId("driver_marker")
-                    .setPosition(currentLatLong)
-                    .setIsIconClickable(false)
-                    .setIconIntRes(R.drawable.ic_car)
-                    .setIconRotation(getRotation(from, currentLatLong))
-                    .setIsAnimationEnable(true)
-                    .build()
-                driverMarker = map?.addMarker(markerOptions)
-                previousLatLong = currentLatLong
+        if (driverLocation != null) {
+            driverLocation?.let { currentLatLong ->
+                if (isMapReady) {
+                    val from = previousLatLong ?: currentLatLong
+                    val markerOptions = OlaMarkerOptions.Builder()
+                        .setMarkerId("driver_marker")
+                        .setPosition(currentLatLong)
+                        .setIsIconClickable(false)
+                        .setIconIntRes(R.drawable.ic_car)
+                        .setIconRotation(getRotation(from, currentLatLong))
+                        .setIsAnimationEnable(true)
+                        .build()
+                    driverMarker = map?.addMarker(markerOptions)
+                    previousLatLong = currentLatLong
+                }
             }
+        } else {
+            driverMarker?.removeMarker()
         }
     }
 
@@ -262,7 +275,6 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
                     locationClient.getCurrentLocation()
                 }.onSuccess { location ->
                     map?.zoomToLocation(OlaLatLng(location.latitude, location.longitude), 15.0)
-                    viewModel.updatePickupLocation(LocationData(FOR_PICKUP, "Current Location", location.latitude, location.longitude))
                 }.onFailure {
                     it.printStackTrace()
                 }
@@ -280,17 +292,12 @@ fun OlaMapView(viewModel: MapScreenViewModel) {
 @Composable
 fun FindTripView(
     viewModel: MapScreenViewModel,
-    locationData: LocationData?,
+    mainViewModel: MainViewModel,
     onLocationSearchClick: (String) -> Unit
 ) {
-    if (locationData?.locationFor == FOR_PICKUP) {
-        viewModel.updatePickupLocation(locationData)
-    } else if (locationData?.locationFor == FOR_DROP) {
-        viewModel.updateDropLocation(locationData)
-    }
-    val pickupData by viewModel.pickupLocation.collectAsStateWithLifecycle()
-    val dropData by viewModel.dropLocation.collectAsStateWithLifecycle()
-    val rideEnabled by viewModel.rideBookingEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val pickupData by mainViewModel.pickupLocation.collectAsStateWithLifecycle()
+    val dropData by mainViewModel.dropLocation.collectAsStateWithLifecycle()
+    val rideEnabled by mainViewModel.rideBookingEnabled.collectAsStateWithLifecycle(initialValue = false)
 
     Column(
         modifier = Modifier
@@ -334,6 +341,7 @@ fun FindTripView(
                 contentDescription = "pickup icon"
             )
 
+            println("location data log pickupdata = $pickupData")
             if (!pickupData?.address.isNullOrEmpty()) {
                 Text(
                     text = pickupData?.address!!,
@@ -383,6 +391,7 @@ fun FindTripView(
                 contentDescription = "drop icon"
             )
 
+            println("location data log dropdata = $dropData")
             if (!dropData?.address.isNullOrEmpty()) {
                 Text(
                     text = dropData?.address!!,
@@ -406,7 +415,8 @@ fun FindTripView(
                 .height(48.dp),
             shape = RoundedCornerShape(5.dp),
             onClick = {
-                viewModel.requestRide()
+                viewModel.observeRideResponse()
+                mainViewModel.requestRide()
             },
             enabled = rideEnabled,
             colors = ButtonDefaults.buttonColors(
@@ -472,12 +482,6 @@ fun RequestedRideView(viewModel: MapScreenViewModel) {
             trackColor = Color(0xFFE2E2E2)
         )
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun P() {
-    AcceptedRideView()
 }
 
 @Composable
@@ -714,6 +718,217 @@ fun getRotation(start: OlaLatLng, end: OlaLatLng): Float {
         }
     }
     return rotation
+}
+
+@Composable
+fun DriverAtPickupView() {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .background(color = Color.White)
+        .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 16.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Driver is arrived",
+            style = TextStyle(
+                fontSize = 14.sp,
+                color = Color.Black,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Text(
+            modifier = Modifier
+                .padding(24.dp),
+            text = "Share this code with your driver",
+            style = TextStyle(
+                fontSize = 22.sp,
+                color = Color.Black,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(
+                space = 16.dp
+            )
+        ) {
+            repeat(4) { count ->
+                Box(modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(
+                        border = BorderStroke(2.dp, Color.Black),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .background(Color(0xFFF2F2F2)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        text = (count + 1).toString(),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+            }
+        }
+
+        HorizontalDivider(
+            modifier = Modifier
+                .padding(top = 16.dp, bottom = 16.dp)
+                .fillMaxWidth()
+                .height(2.dp)
+                .padding(),
+            color = Color(0xFFE2E2E2)
+        )
+    }
+}
+
+@Composable
+fun RideCompletedView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color = Color.White)
+    ) {
+        Text(
+            modifier = Modifier
+                .padding(start = 16.dp, top = 16.dp),
+            text = "Your ride is completed.",
+            style = TextStyle(
+                color = Color.Black,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        Text(
+            modifier = Modifier
+                .padding(start = 16.dp, top = 16.dp, bottom = 32.dp),
+            text = "You can try new ride now",
+            style = TextStyle(
+                fontSize = 14.sp,
+                color = Color.Black
+            )
+        )
+
+        Button(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(5.dp),
+            onClick = {
+                mainViewModel.reset()
+                viewModel.showFindTripView()
+            },
+            colors = ButtonDefaults.buttonColors(
+                contentColor = Color.White,
+                containerColor = Color.Black,
+                disabledContainerColor = Color(0xFFEEEEEE)
+            )
+        ) {
+            Text("OK")
+        }
+    }
+}
+
+@Composable
+fun StartedRideView() {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .background(color = Color.White)
+        .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                text = "Heading to your destination",
+                style = TextStyle(
+                    fontSize = 22.sp,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+
+        HorizontalDivider(
+            modifier = Modifier
+                .padding(top = 16.dp, bottom = 16.dp)
+                .fillMaxWidth()
+                .height(2.dp)
+                .padding(),
+            color = Color(0xFFE2E2E2)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(99.dp)),
+                painter = painterResource(R.drawable.ic_launcher_background),
+                contentDescription = "driver image"
+            )
+
+            Column(
+                modifier = Modifier,
+
+                ) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Sanit",
+                    textAlign = TextAlign.End,
+                    style = TextStyle(
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                )
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "MH 50 SK5055",
+                    textAlign = TextAlign.End,
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = "Maruti Suzuki",
+                    textAlign = TextAlign.End,
+                    style = TextStyle(
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
+                )
+            }
+        }
+    }
 }
 
 const val FOR_PICKUP = "pickup"

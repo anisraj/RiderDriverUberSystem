@@ -51,7 +51,7 @@ class LocationSearchViewModel @Inject constructor() : ViewModel() {
     private fun fetchLocations() {
         viewModelScope.launch {
             _query
-                .debounce(800)
+                .debounce(500)
                 .filter { query ->
                     return@filter query.isNotEmpty()
                 }

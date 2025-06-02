@@ -5,4 +5,8 @@ data class BookingData(
     val deliveryTo: String,
     val time: Int,
     val budget: Double,
+    val ridePickupLatitude: Double,
+    val ridePickupLongitude: Double,
+    val rideDropLatitude: Double,
+    val rideDropLongitude: Double
 )
