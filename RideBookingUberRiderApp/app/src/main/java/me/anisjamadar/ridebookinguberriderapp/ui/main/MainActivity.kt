@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val mainViewModel by viewModels<MainViewModel>()
+        mainViewModel.startGrpc()
 
         setContent {
             RideBookingUberRiderAppTheme {

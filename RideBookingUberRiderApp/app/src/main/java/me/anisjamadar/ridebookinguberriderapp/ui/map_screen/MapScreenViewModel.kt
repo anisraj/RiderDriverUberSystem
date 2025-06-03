@@ -66,7 +66,6 @@ class MapScreenViewModel @Inject constructor() : ViewModel() {
                             _rideStatus.value = RequestedRideStatus
                         }
                         GrpcConstant.DriverAction.ACCEPTED -> {
-                            startObservingLocationUpdates()
                             _rideStatus.value = AcceptedRideStatus
                         }
                         GrpcConstant.DriverAction.REJECTED -> {
@@ -92,13 +91,17 @@ class MapScreenViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    private fun startObservingLocationUpdates() {
+    fun startObservingLocationUpdates() {
         viewModelScope.launch {
             FlowOfLocationResponse
                 .locationFlow
                 .collect {
                     println("getting driver location from server $it")
-                    _driverLocation.value = OlaLatLng(it.first, it.second)
+                    if (it.first == 0.0 && it.second == 0.0) {
+                        _driverLocation.value = null
+                    } else {
+                        _driverLocation.value = OlaLatLng(it.first, it.second)
+                    }
                 }
         }
         GrpcHandler.getDriverLocationUpdates()

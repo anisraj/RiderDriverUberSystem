@@ -66,8 +66,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun requestRide() {
+    fun startGrpc() {
         GrpcHandler.startGrpc()
+    }
+
+    fun requestRide() {
         GrpcHandler.sendRideRequest(
             pickupLocation.value?.latitude ?: 0.0,
             pickupLocation.value?.longitude ?: 0.0,

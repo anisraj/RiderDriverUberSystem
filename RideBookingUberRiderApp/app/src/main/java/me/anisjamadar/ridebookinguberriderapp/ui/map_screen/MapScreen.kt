@@ -90,6 +90,10 @@ fun MapScreen(
     val rideStatus by viewModel.rideStatus.collectAsStateWithLifecycle()
     val loadingTrigger by mainViewModel.loadingTrigger.collectAsStateWithLifecycle()
 
+    LaunchedEffect(Unit) {
+        viewModel.startObservingLocationUpdates()
+    }
+
     Scaffold { padding ->
         Box(
             modifier = Modifier
