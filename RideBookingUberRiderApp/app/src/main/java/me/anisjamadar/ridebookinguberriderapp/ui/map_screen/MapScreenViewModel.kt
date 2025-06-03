@@ -113,7 +113,7 @@ class MapScreenViewModel @Inject constructor() : ViewModel() {
             @SuppressLint("DefaultLocale")
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = millisUntilFinished / 1000
-                val progress = ((seconds.toFloat() / time) * 100)
+                val progress = 100 - ((seconds.toFloat() / time) * 100)
                 _progressValue.value = progress.toInt()
             }
 

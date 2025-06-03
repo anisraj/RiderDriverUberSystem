@@ -345,13 +345,15 @@ fun FindTripView(
                 contentDescription = "pickup icon"
             )
 
-            println("location data log pickupdata = $pickupData")
             if (!pickupData?.address.isNullOrEmpty()) {
                 Text(
                     text = pickupData?.address!!,
                     color = Color.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
             } else {
                 Text(
@@ -395,13 +397,15 @@ fun FindTripView(
                 contentDescription = "drop icon"
             )
 
-            println("location data log dropdata = $dropData")
             if (!dropData?.address.isNullOrEmpty()) {
                 Text(
                     text = dropData?.address!!,
                     color = Color.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
             } else {
                 Text(
@@ -480,7 +484,7 @@ fun RequestedRideView(viewModel: MapScreenViewModel) {
             modifier = Modifier
                 .padding(top = 32.dp, bottom = 16.dp)
                 .fillMaxWidth()
-                .height(2.dp)
+                .height(5.dp)
                 .padding(),
             color = Color.Black,
             trackColor = Color(0xFFE2E2E2)
