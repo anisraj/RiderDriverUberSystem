@@ -54,6 +54,12 @@ function driverLocation(call) {
   call.on('end',function(){
     console.log("Driver is offline");
     isDriverOnline = false;
+    if (currentRiderLocationStream != null) {
+      currentRiderLocationStream.write({
+        latitude: 0.0,
+        longitude: 0.0
+      });
+    }
     call.end();
   });
 
