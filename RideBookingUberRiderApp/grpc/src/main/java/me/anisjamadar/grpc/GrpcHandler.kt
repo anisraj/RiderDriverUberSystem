@@ -38,7 +38,8 @@ object GrpcHandler {
     fun sendRideRequest(
         pickupLatitude: Double, pickupLongitude: Double,
         dropLatitude: Double, dropLongitude: Double,
-        pickupAddress: String, dropAddress: String
+        pickupAddress: String, dropAddress: String,
+        distanceInKm: Double
     ) {
         val request = RideRequest.newBuilder()
             .setTime(COUNTDOWN_TIME_IN_SECONDS)
@@ -48,6 +49,7 @@ object GrpcHandler {
             .setDropLongitude(dropLongitude)
             .setPickupAddress(pickupAddress)
             .setDropAddress(dropAddress)
+            .setDistanceInKm(distanceInKm)
             .build()
 
         val responseObserver = object : StreamObserver<RideResponse> {

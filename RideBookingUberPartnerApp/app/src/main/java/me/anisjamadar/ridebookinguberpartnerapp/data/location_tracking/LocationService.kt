@@ -65,7 +65,8 @@ class LocationService : Service() {
                         ridePickupLatitude = it.ridePickupLatitude,
                         ridePickupLongitude = it.ridePickupLongitude,
                         rideDropLatitude = it.rideDropLatitude,
-                        rideDropLongitude = it.rideDropLongitude
+                        rideDropLongitude = it.rideDropLongitude,
+                        distance = it.distanceInKm
                     )
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     startActivity(intent)

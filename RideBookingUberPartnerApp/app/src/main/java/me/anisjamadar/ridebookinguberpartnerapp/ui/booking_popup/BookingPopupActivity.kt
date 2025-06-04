@@ -9,28 +9,37 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
@@ -38,9 +47,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,6 +71,9 @@ class BookingPopupActivity : ComponentActivity() {
 
     private val time: Int
         get() = checkNotNull(intent.getIntExtra(TIME, 20))
+
+    private val distance: Double
+        get() = checkNotNull(intent.getDoubleExtra(DISTANCE, 0.0))
 
     private val budget: Double
         get() = checkNotNull(intent.getDoubleExtra(BUDGET, 0.0))
@@ -85,6 +99,7 @@ class BookingPopupActivity : ComponentActivity() {
         private const val RIDE_PICKUP_LONGITUDE = "rider_pickup_longitude"
         private const val RIDE_DROP_LATITUDE = "rider_drop_latitude"
         private const val RIDE_DROP_LONGITUDE = "rider_drop_longitude"
+        private const val DISTANCE = "distance"
 
         fun start(
             context: Context,
@@ -95,7 +110,8 @@ class BookingPopupActivity : ComponentActivity() {
             ridePickupLatitude: Double,
             ridePickupLongitude: Double,
             rideDropLatitude: Double,
-            rideDropLongitude: Double
+            rideDropLongitude: Double,
+            distance: Double
         ): Intent {
             return Intent(context, BookingPopupActivity::class.java).apply {
                 putExtra(DELIVERY_FROM, deliveryFrom)
@@ -106,6 +122,7 @@ class BookingPopupActivity : ComponentActivity() {
                 putExtra(RIDE_PICKUP_LONGITUDE, ridePickupLongitude)
                 putExtra(RIDE_DROP_LATITUDE, rideDropLatitude)
                 putExtra(RIDE_DROP_LONGITUDE, rideDropLongitude)
+                putExtra(DISTANCE, distance)
             }
         }
     }
@@ -119,63 +136,56 @@ class BookingPopupActivity : ComponentActivity() {
             }
         })
         setContent {
-            LocationSharingApplicationTheme {
-                Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) { innerPadding ->
-                    BookingPopupScreen(
-                        time,
-                        deliveryFrom,
-                        deliveryTo,
-                        budget,
-                        ridePickupLatitude,
-                        ridePickupLongitude,
-                        rideDropLatitude,
-                        rideDropLongitude,
-                        modifier = Modifier
-                            .padding(innerPadding)
-                    )
-                }
-            }
+            RideRequestDialog(
+                onRejectClick = {
+                    finishActivity()
+                },
+                onAcceptClick = {
+                    openRideStatus()
+                },
+                time,
+                deliveryFrom,
+                deliveryTo,
+                budget,
+                distance
+            )
         }
         wakeUpWhenLock()
+    }
+
+    private fun openRideStatus() {
+        val intent = MainActivity.start(
+            this,
+            ridePickupLatitude,
+            ridePickupLongitude,
+            rideDropLatitude,
+            rideDropLongitude
+        )
+        startActivity(intent)
+        finishActivity()
+    }
+
+    private fun finishActivity() {
+        finish()
     }
 }
 
 @Composable
-fun BookingPopupScreen(
+fun RideRequestDialog(
+    onRejectClick: () -> Unit,
+    onAcceptClick: () -> Unit,
     time: Int,
     deliveryFrom: String,
     deliveryTo: String,
     budget: Double,
-    ridePickupLatitude: Double,
-    ridePickupLongitude: Double,
-    rideDropLatitude: Double,
-    rideDropLongitude: Double,
-    modifier: Modifier
+    distance: Double
 ) {
     val viewModel = hiltViewModel<BookingPopupViewModel>()
-    val finishPage by viewModel.finishPage.collectAsStateWithLifecycle()
-    val startMain by viewModel.startMain.collectAsStateWithLifecycle()
     val mediaPlayer = MediaPlayer.create(LocalContext.current, R.raw.alarm)
-
-    if (startMain) {
-        LocalActivity.current?.let {
-            val intent = MainActivity.start(
-                it,
-                ridePickupLatitude,
-                ridePickupLongitude,
-                rideDropLatitude,
-                rideDropLongitude
-            )
-            it.startActivity(intent)
-            it.finish()
-        }
-    }
+    val finishPage by viewModel.finishPage.collectAsStateWithLifecycle()
 
     if (finishPage) {
-        LocalActivity.current?.finish()
+        onRejectClick.invoke()
     }
 
     DisposableEffect(Unit) {
@@ -190,124 +200,199 @@ fun BookingPopupScreen(
     }
 
     Column(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(
-            space = 4.dp
-        )
-    ) {
-        Budget(budget)
-        ShowAddress(deliveryFrom, 1)
-        HorizontalDivider(
-            modifier = Modifier
-                .padding(horizontal = 20.dp),
-            thickness = 5.dp,
-            color = Color.Green
-        )
-        ShowAddress(deliveryTo, 2)
-        TimerLayout(viewModel)
-        ActionButtons(viewModel)
-    }
-}
-
-@Composable
-fun Budget(budget: Double) {
-    Box(
         modifier = Modifier
-            .background(color = Color(0xFF8B93FF)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            modifier = Modifier
-                .padding(15.dp),
-            color = Color.White,
-            text = "BUDGET : ₹$budget",
-            textAlign = TextAlign.Center,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
-}
-
-@Composable
-fun ShowAddress(deliveryAddress: String, addressType: Int) {
-    Column(
-        modifier = Modifier
+            .fillMaxWidth()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(
-            space = 10.dp,
-            alignment = Alignment.CenterVertically
-        )
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(
-                space = 16.dp,
-                alignment = Alignment.Start
-            )
-        ) {
-            Image(
-                painter = if (addressType == 1) {
-                    painterResource(id = R.drawable.pickup_label)
-                } else {
-                    painterResource(id = R.drawable.drop_label)
-                },
-                contentDescription = "pickup_label",
-                modifier = Modifier
-                    .size(50.dp),
-                contentScale = ContentScale.Crop
-            )
+        TimerView(modifier = Modifier
+            .zIndex(1f)
+            .fillMaxWidth()
+            .background(Color.Transparent),
+            viewModel
+        )
 
-            Text(
-                text = if (addressType == 1) {
-                    "Pickup Address"
-                } else {
-                    "Delivery Address"
-                },
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-            )
-        }
-
-        Text(
-            text = deliveryAddress,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 66.dp)
-        )
+                .offset(y = (-45).dp)
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            color = Color.White,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(58.dp))
 
+                Text(
+                    text = "$distance km Ride!",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(modifier = Modifier
+                    .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color.Green, CircleShape)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(28.dp)
+                                .background(Color.Gray)
+                                .align(Alignment.CenterHorizontally)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color.Red, CircleShape)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = deliveryFrom,
+                            fontSize = 14.sp,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = deliveryTo,
+                            fontSize = 14.sp,
+                            color = Color.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                HorizontalDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .padding(),
+                    color = Color(0xFFE2E2E2)
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Row(modifier = Modifier
+                    .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "TOTAL BUDGET",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+
+                    Text(
+                        text = "₹$budget",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(38.dp))
+
+                Row(modifier = Modifier
+                    .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        space = 25.dp
+                    )
+                ) {
+                    Button(
+                        modifier = Modifier
+                            .weight(1f),
+                        border = BorderStroke(width = 2.dp, color = Color.Red),
+                        shape = RoundedCornerShape(10.dp),
+                        onClick = {
+                            viewModel.updateBooking(3)
+                            onRejectClick.invoke()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color.Red
+                        )
+                    ) {
+                        Text(
+                            text = "REJECT"
+                        )
+                    }
+
+                    Button(
+                        modifier = Modifier
+                            .weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        onClick = {
+                            viewModel.updateBooking(2)
+                            onAcceptClick.invoke()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Green,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "ACCEPT"
+                        )
+                    }
+                }
+            }
+        }
     }
+
 }
 
 @Composable
-fun TimerLayout(viewModel: BookingPopupViewModel) {
+fun TimerView(modifier: Modifier, viewModel: BookingPopupViewModel) {
     val progress by viewModel.progressValue.collectAsStateWithLifecycle()
     val timerText by viewModel.timer.collectAsStateWithLifecycle()
 
     Column(
-        modifier = Modifier
-            .padding(top = 15.dp, bottom = 15.dp)
-            .fillMaxWidth(),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .padding(top = 80.dp)
-                .size(150.dp),
+                .size(95.dp)
+                .clip(shape = CircleShape)
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
 
             CircularProgressIndicator(
                 progress = { progress.toFloat() / 100 },
                 modifier = Modifier
-                    .size(150.dp),
+                    .size(95.dp),
                 color = Color.Green,
                 trackColor = Color.LightGray,
                 strokeWidth = 12.dp,
@@ -316,73 +401,11 @@ fun TimerLayout(viewModel: BookingPopupViewModel) {
 
             Text(
                 text = timerText,
-                fontSize = 40.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
         }
 
     }
-}
-
-@Composable
-fun ActionButtons(viewModel: BookingPopupViewModel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 50.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(
-            space = 16.dp,
-            alignment = Alignment.CenterHorizontally
-        )
-    ) {
-        Button(
-            modifier = Modifier
-                .height(60.dp)
-                .weight(weight = 1f),
-            colors = ButtonColors(
-                containerColor = Color.Red,
-                contentColor = Color.White,
-                disabledContentColor = Color.Red,
-                disabledContainerColor = Color.White
-            ),
-            onClick = {
-                viewModel.updateBooking(3)
-            }
-        ) {
-            Text(
-                text = "REJECT",
-                fontWeight = FontWeight.Bold,
-            )
-        }
-
-        Button(
-            modifier = Modifier
-                .height(60.dp)
-                .weight(weight = 1f),
-            colors = ButtonColors(
-                containerColor = Color.Green,
-                contentColor = Color.White,
-                disabledContentColor = Color.Green,
-                disabledContainerColor = Color.White
-            ),
-            onClick = {
-                viewModel.updateBooking(2)
-            }
-        ) {
-            Text(
-                text = "ACCEPT",
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Preview(
-    showBackground = true
-)
-@Composable
-private fun BookingPopupPreview() {
-    BookingPopupScreen(30,"Pune", "Mumbai", 20.0, 0.0, 0.0, 0.0, 0.0, Modifier)
 }

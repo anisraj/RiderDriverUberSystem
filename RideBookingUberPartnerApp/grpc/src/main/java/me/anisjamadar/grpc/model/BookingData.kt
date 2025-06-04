@@ -8,5 +8,6 @@ data class BookingData(
     val ridePickupLatitude: Double,
     val ridePickupLongitude: Double,
     val rideDropLatitude: Double,
-    val rideDropLongitude: Double
+    val rideDropLongitude: Double,
+    val distanceInKm: Double
 )

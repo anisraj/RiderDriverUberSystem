@@ -71,14 +71,31 @@ class MainViewModel @Inject constructor(
     }
 
     fun requestRide() {
-        GrpcHandler.sendRideRequest(
-            pickupLocation.value?.latitude ?: 0.0,
-            pickupLocation.value?.longitude ?: 0.0,
-            dropLocation.value?.latitude ?: 0.0,
-            dropLocation.value?.longitude ?: 0.0,
-            pickupLocation.value?.address ?: "",
-            dropLocation.value?.address ?: ""
-        )
+        viewModelScope.launch {
+            _loadingTrigger.value = true
+            repository
+                .getDistanceInKm(
+                    "${_pickupLocation.value?.latitude},${_pickupLocation.value?.longitude}",
+                    "${_dropLocation.value?.latitude},${_dropLocation.value?.longitude}"
+                )
+                .flowOn(Dispatchers.IO)
+                .catch {
+                    _loadingTrigger.value = false
+                    it.printStackTrace()
+                }
+                .collect {
+                    _loadingTrigger.value = false
+                    GrpcHandler.sendRideRequest(
+                        pickupLocation.value?.latitude ?: 0.0,
+                        pickupLocation.value?.longitude ?: 0.0,
+                        dropLocation.value?.latitude ?: 0.0,
+                        dropLocation.value?.longitude ?: 0.0,
+                        pickupLocation.value?.address ?: "",
+                        dropLocation.value?.address ?: "",
+                        it
+                    )
+                }
+        }
     }
 
     fun drawOriginToDestPolyline() {

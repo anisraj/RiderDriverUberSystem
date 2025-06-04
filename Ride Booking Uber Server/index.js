@@ -125,7 +125,8 @@ function requestRide(call) {
     rideDropLatitude: rideRequest.dropLatitude,
     rideDropLongitude: rideRequest.dropLongitude,
     time: rideRequest.time,
-    budget: 500 
+    budget: 500 ,
+    distanceInKm: rideRequest.distanceInKm
   });
 
   call.write({

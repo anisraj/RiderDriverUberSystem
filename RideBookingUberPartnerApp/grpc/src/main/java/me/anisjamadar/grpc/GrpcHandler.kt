@@ -112,7 +112,8 @@ object GrpcHandler {
                 value.ridePickupLatitude,
                 value.ridePickupLongitude,
                 value.rideDropLatitude,
-                value.rideDropLongitude
+                value.rideDropLongitude,
+                value.distanceInKm
             ))
         }
     }

@@ -23,3 +23,5 @@ fun Context.isLocationEnabled(): Boolean {
     return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
             || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 }
+
+fun Double.round(decimals: Int = 2): Double = "%.${decimals}f".format(this).toDouble()

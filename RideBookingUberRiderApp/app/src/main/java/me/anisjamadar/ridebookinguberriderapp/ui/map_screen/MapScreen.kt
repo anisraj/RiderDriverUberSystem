@@ -250,7 +250,7 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
                         .setMarkerId("driver_marker")
                         .setPosition(currentLatLong)
                         .setIsIconClickable(false)
-                        .setIconIntRes(R.drawable.ic_car)
+                        .setIconIntRes(R.drawable.ny_ic_auto_map)
                         .setIconRotation(getRotation(from, currentLatLong))
                         .setIsAnimationEnable(true)
                         .build()
@@ -564,7 +564,7 @@ fun AcceptedRideView() {
             Icon(
                 modifier = Modifier
                     .clip(RoundedCornerShape(99.dp)),
-                painter = painterResource(R.drawable.ic_launcher_background),
+                painter = painterResource(R.drawable.ic_driver_avatar),
                 contentDescription = "driver image"
             )
 
@@ -895,7 +895,7 @@ fun StartedRideView() {
             Icon(
                 modifier = Modifier
                     .clip(RoundedCornerShape(99.dp)),
-                painter = painterResource(R.drawable.ic_launcher_background),
+                painter = painterResource(R.drawable.ic_driver_avatar),
                 contentDescription = "driver image"
             )
 

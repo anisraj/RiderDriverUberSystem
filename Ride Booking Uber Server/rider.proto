@@ -28,6 +28,7 @@ message RideRequest {
     double dropLongitude = 5;
     string pickupAddress = 6;
     string dropAddress = 7;
+    double distanceInKm = 8;
 }
 
 //response message for ride request

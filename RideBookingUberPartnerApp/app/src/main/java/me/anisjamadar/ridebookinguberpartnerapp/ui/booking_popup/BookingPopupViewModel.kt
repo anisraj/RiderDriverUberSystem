@@ -5,17 +5,24 @@ import android.os.CountDownTimer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant
 import me.anisjamadar.grpc.GrpcHandler
 import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.LocationService
+import me.anisjamadar.ridebookinguberpartnerapp.data.repository.PartnerRepository
 import javax.inject.Inject
 
 @HiltViewModel
-class BookingPopupViewModel @Inject constructor() : ViewModel() {
+class BookingPopupViewModel @Inject constructor(
+    private val partnerRepository: PartnerRepository
+) : ViewModel() {
 
     private val _progressValue = MutableStateFlow(0)
     val progressValue: StateFlow<Int> = _progressValue.asStateFlow()
@@ -25,9 +32,6 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
 
     private val _finishPage = MutableStateFlow(false)
     val finishPage: StateFlow<Boolean> = _finishPage.asStateFlow()
-
-    private val _startMain = MutableStateFlow(false)
-    val startMain: StateFlow<Boolean> = _startMain.asStateFlow()
 
     private var countDownTimer: CountDownTimer? = null
 
@@ -64,11 +68,6 @@ class BookingPopupViewModel @Inject constructor() : ViewModel() {
                         GrpcHandler.updateRideStatus(action)
                     }
                 }
-        }
-        if (action == GrpcConstant.DriverAction.ACCEPTED.ordinal) {
-            _startMain.value = true
-        } else {
-            finishPage()
         }
     }
 
