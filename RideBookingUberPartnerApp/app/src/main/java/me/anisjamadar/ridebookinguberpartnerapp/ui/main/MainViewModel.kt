@@ -22,7 +22,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val partnerRepository: PartnerRepository
+    private val partnerRepository: PartnerRepository,
+    private val locationClient: LocationClient
 ) : ViewModel() {
     private val _polyline = MutableStateFlow<ArrayList<OlaLatLng>>(arrayListOf())
     val polyline: StateFlow<ArrayList<OlaLatLng>> = _polyline.asStateFlow()
@@ -63,7 +64,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun drawCurrentLocationToOriginPolyline(locationClient: LocationClient) {
+    fun drawCurrentLocationToOriginPolyline() {
         viewModelScope.launch {
             runCatching {
                 locationClient.getCurrentLocation()

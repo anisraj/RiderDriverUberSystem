@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.LocationServices
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,10 +24,14 @@ import me.anisjamadar.grpc.flows.FlowBookingAcknowledge
 import me.anisjamadar.ridebookinguberpartnerapp.APP_TAG
 import me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup.BookingPopupActivity
 import me.anisjamadar.locationsharingapplication.R
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class LocationService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private lateinit var locationClient: LocationClient
+
+    @Inject
+    lateinit var locationClient: LocationClient
 
     override fun onBind(p0: Intent?): IBinder? {
         return null
@@ -34,10 +39,6 @@ class LocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        locationClient = DefaultLocationClient(
-            applicationContext,
-            LocationServices.getFusedLocationProviderClient(applicationContext)
-        )
         startGrpcService()
         observeBookings()
     }
@@ -77,11 +78,12 @@ class LocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when(intent?.action) {
-            ACTION_START -> start()
-            ACTION_STOP -> stop()
+        if (!isServiceRunning.value) {
+            start()
+        } else {
+            stop()
         }
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     @SuppressLint("ServiceCast")
@@ -119,9 +121,6 @@ class LocationService : Service() {
     }
 
     companion object {
-        const val ACTION_START = "ACTION_START"
-        const val ACTION_STOP = "ACTION_STOP"
-
         private val _isServiceRunning = MutableStateFlow(false)
         val isServiceRunning: StateFlow<Boolean> = _isServiceRunning.asStateFlow()
     }

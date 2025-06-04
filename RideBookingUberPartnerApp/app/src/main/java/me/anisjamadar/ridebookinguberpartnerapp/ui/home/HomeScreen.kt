@@ -74,16 +74,8 @@ fun HomeScreen() {
                         shape = RoundedCornerShape(25.dp)
                     )
                     .clickable {
-                        if (onlineStatus) {
-                            Intent(context, LocationService::class.java).apply {
-                                action = LocationService.ACTION_STOP
-                                context.startService(this)
-                            }
-                        } else {
-                            Intent(context, LocationService::class.java).apply {
-                                action = LocationService.ACTION_START
-                                context.startService(this)
-                            }
+                        Intent(context, LocationService::class.java).apply {
+                            context.startService(this)
                         }
                     }
                     .zIndex(1f),

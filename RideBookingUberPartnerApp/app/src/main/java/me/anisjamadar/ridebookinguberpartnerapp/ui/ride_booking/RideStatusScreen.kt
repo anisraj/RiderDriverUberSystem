@@ -1,13 +1,9 @@
 package me.anisjamadar.ridebookinguberpartnerapp.ui.ride_booking
 
 import androidx.activity.compose.LocalActivity
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,7 +36,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,11 +43,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.times
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.gms.location.LocationServices
 import com.ola.mapsdk.camera.OlaCameraUpdate
 import com.ola.mapsdk.interfaces.OlaMapCallback
 import com.ola.mapsdk.model.OlaLatLng
@@ -67,7 +59,6 @@ import com.ola.mapsdk.view.Polyline
 import me.anisjamadar.grpc.GrpcConstant
 import me.anisjamadar.locationsharingapplication.BuildConfig
 import me.anisjamadar.locationsharingapplication.R
-import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.DefaultLocationClient
 import me.anisjamadar.ridebookinguberpartnerapp.ui.main.MainActivity
 import me.anisjamadar.ridebookinguberpartnerapp.ui.main.MainViewModel
 import kotlin.math.max
@@ -125,12 +116,7 @@ fun RideStatusScreen(mainViewModel: MainViewModel) {
                             .padding(horizontal = 16.dp),
                         text = when(status) {
                             GrpcConstant.DriverAction.ACCEPTED -> {
-                                mainViewModel.drawCurrentLocationToOriginPolyline(
-                                    DefaultLocationClient(
-                                        LocalContext.current,
-                                        LocationServices.getFusedLocationProviderClient(LocalContext.current)
-                                    )
-                                )
+                                mainViewModel.drawCurrentLocationToOriginPolyline()
                                 "Arrived to pickup"
                             }
                             GrpcConstant.DriverAction.ARRIVED_AT_PICKUP -> "Start the ride"
