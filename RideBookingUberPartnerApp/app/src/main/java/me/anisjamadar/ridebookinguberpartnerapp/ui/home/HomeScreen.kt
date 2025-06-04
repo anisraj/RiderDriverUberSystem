@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,32 +29,17 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ola.mapsdk.interfaces.OlaMapCallback
+import com.ola.mapsdk.model.OlaLatLng
+import com.ola.mapsdk.model.OlaMarkerOptions
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
 import me.anisjamadar.locationsharingapplication.BuildConfig
+import me.anisjamadar.locationsharingapplication.R
 import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.LocationService
 
 @Composable
 fun HomeScreen() {
     val context = LocalContext.current
-    var map by remember { mutableStateOf<OlaMap?>(null) }
-    var isMapReady by remember { mutableStateOf(false) }
-    val mapView by remember {
-        mutableStateOf(OlaMapView(context).also {
-            it.getMap(
-                apiKey = BuildConfig.API_KEY,
-                olaMapCallback = object : OlaMapCallback {
-                    override fun onMapError(error: String) {}
-                    override fun onMapReady(olaMap: OlaMap) {
-                        map = olaMap
-                        map?.showCurrentLocation()
-                        isMapReady = true
-                    }
-                }
-            )
-        })
-    }
-
     Scaffold { padding ->
         Box(
             modifier = Modifier
@@ -92,9 +78,29 @@ fun HomeScreen() {
                 )
             }
 
-            AndroidView(
-                factory = { mapView }
-            )
+            OlaMapView()
         }
     }
+}
+
+@Composable
+fun OlaMapView() {
+    val context = LocalContext.current
+    val mapView by remember {
+        mutableStateOf(OlaMapView(context).also {
+            it.getMap(
+                apiKey = BuildConfig.API_KEY,
+                olaMapCallback = object : OlaMapCallback {
+                    override fun onMapError(error: String) {}
+                    override fun onMapReady(olaMap: OlaMap) {
+                        olaMap.showCurrentLocation()
+                    }
+                }
+            )
+        })
+    }
+
+    AndroidView(
+        factory = { mapView }
+    )
 }

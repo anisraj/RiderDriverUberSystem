@@ -151,10 +151,7 @@ fun MapScreen(
 @SuppressLint("MissingPermission")
 @Composable
 fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    var permissionsGranted by remember { mutableStateOf(false) }
 
     var polyline by remember { mutableStateOf<Polyline?>(null) }
 
@@ -260,29 +257,6 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
             }
         } else {
             driverMarker?.removeMarker()
-        }
-    }
-
-    val locationClient by remember {
-        mutableStateOf(
-            LocationClient(
-                context,
-                LocationServices.getFusedLocationProviderClient(context)
-            )
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        if (permissionsGranted) {
-            scope.launch {
-                runCatching {
-                    locationClient.getCurrentLocation()
-                }.onSuccess { location ->
-                    map?.zoomToLocation(OlaLatLng(location.latitude, location.longitude), 15.0)
-                }.onFailure {
-                    it.printStackTrace()
-                }
-            }
         }
     }
 

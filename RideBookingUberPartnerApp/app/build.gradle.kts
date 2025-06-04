@@ -52,17 +52,6 @@ dependencies {
 
     implementation(project(":grpc"))
 
-    //OlaMap SDK
-    implementation(files("libs/OlaMapSdk-1.6.0.aar"))
-    implementation(files("libs/Places-sdk-2.3.9.jar"))
-    //Maplibre
-    implementation (libs.maplibre.sdk)
-    implementation (libs.maplibre.android.plugin.annotation)
-    implementation (libs.maplibre.markerview.plugin.annotation)
-    //Ola maps uses views, so for that these two libraries needed
-    implementation(libs.androidx.constraintlayout)
-    implementation(libs.androidx.cardview)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -80,6 +69,17 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    //OlaMap SDK
+    implementation(files("libs/OlaMapSdk-1.6.0.aar"))
+    implementation(files("libs/Places-sdk-2.3.9.jar"))
+    //Maplibre
+    implementation (libs.maplibre.sdk)
+    implementation (libs.maplibre.android.plugin.annotation)
+    implementation (libs.maplibre.markerview.plugin.annotation)
+    //Ola maps uses views, so for that these two libraries needed
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.cardview)
 
     // Location Services
     implementation(libs.play.services.location)
