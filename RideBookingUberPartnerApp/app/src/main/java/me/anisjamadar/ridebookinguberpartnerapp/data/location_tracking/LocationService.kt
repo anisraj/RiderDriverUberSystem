@@ -2,7 +2,11 @@ package me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking
 
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.location.LocationManager
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.LocationServices
@@ -24,6 +28,8 @@ import me.anisjamadar.grpc.flows.FlowBookingAcknowledge
 import me.anisjamadar.ridebookinguberpartnerapp.APP_TAG
 import me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup.BookingPopupActivity
 import me.anisjamadar.locationsharingapplication.R
+import me.anisjamadar.ridebookinguberpartnerapp.utils.hasLocationPermission
+import me.anisjamadar.ridebookinguberpartnerapp.utils.isLocationEnabled
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -33,12 +39,29 @@ class LocationService : Service() {
     @Inject
     lateinit var locationClient: LocationClient
 
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
+                val isLocationEnabled = context?.isLocationEnabled()
+                val hasLocationPermission = context?.hasLocationPermission()
+                if (hasLocationPermission == true &&
+                    isLocationEnabled == false &&
+                    isServiceRunning.value)
+                {
+                    stop()
+                }
+            }
+        }
+
+    }
+
     override fun onBind(p0: Intent?): IBinder? {
         return null
     }
 
     override fun onCreate() {
         super.onCreate()
+        registerGpsReceiver(this)
         startGrpcService()
         observeBookings()
     }
@@ -110,6 +133,7 @@ class LocationService : Service() {
 
     private fun stop() {
         stopForeground(true)
+        unregisterGpsReceiver(this)
         stopSelf()
     }
 
@@ -118,6 +142,17 @@ class LocationService : Service() {
         serviceScope.cancel()
         stopGrpcService()
         _isServiceRunning.value = false
+    }
+
+    private fun registerGpsReceiver(context: Context) {
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        context.registerReceiver(receiver, filter)
+    }
+
+    private fun unregisterGpsReceiver(context: Context) {
+        try {
+            context.unregisterReceiver(receiver)
+        } catch (_: IllegalArgumentException) { }
     }
 
     companion object {

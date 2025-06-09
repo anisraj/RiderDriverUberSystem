@@ -157,7 +157,7 @@ fun OlaMapView(modifier: Modifier, mainViewModel: MainViewModel) {
                     override fun onMapError(error: String) {}
                     override fun onMapReady(olaMap: OlaMap) {
                         map = olaMap
-                        map?.showCurrentLocation()
+                        olaMap.showCurrentLocation()
                         isMapReady = true
                     }
                 }

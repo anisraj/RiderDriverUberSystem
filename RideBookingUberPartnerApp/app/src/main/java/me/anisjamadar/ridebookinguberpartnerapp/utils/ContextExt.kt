@@ -4,7 +4,10 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.os.Build
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 
 fun Context.hasLocationPermission(): Boolean {
@@ -18,6 +21,7 @@ fun Context.hasLocationPermission(): Boolean {
             ) == PackageManager.PERMISSION_GRANTED
 }
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun Context.hasNotificationPermission(): Boolean {
     return ContextCompat.checkSelfPermission(
         this,
@@ -28,4 +32,11 @@ fun Context.hasNotificationPermission(): Boolean {
 fun Activity.wakeUpWhenLock() {
     val window = this.window
     window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+}
+
+fun Context.isLocationEnabled(): Boolean {
+    val locationManager: LocationManager =
+        getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
 }

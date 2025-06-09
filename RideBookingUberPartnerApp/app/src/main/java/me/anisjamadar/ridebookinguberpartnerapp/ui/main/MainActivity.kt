@@ -86,18 +86,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        val permissions = arrayOf(
-            android.Manifest.permission.ACCESS_COARSE_LOCATION,
-            android.Manifest.permission.ACCESS_FINE_LOCATION
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.plus(android.Manifest.permission.POST_NOTIFICATIONS)
-        }
-        ActivityCompat.requestPermissions(
-            this,
-            permissions,
-            0
-        )
+
 
         if (!Settings.canDrawOverlays(this)) {
             val intent = Intent(
