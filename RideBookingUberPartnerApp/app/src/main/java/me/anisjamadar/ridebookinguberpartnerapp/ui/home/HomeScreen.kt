@@ -10,11 +10,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -27,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -35,6 +40,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ola.mapsdk.camera.MapControlSettings
 import com.ola.mapsdk.interfaces.OlaMapCallback
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
@@ -50,11 +56,13 @@ fun HomeScreen() {
     Scaffold { padding ->
         Box(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize(),
             contentAlignment = Alignment.TopCenter
         ) {
-            ChangeStatusView()
+            ChangeStatusView(
+                modifier = Modifier
+                    .padding(padding)
+            )
             OlaMapView()
         }
     }
@@ -71,6 +79,11 @@ fun OlaMapView() {
                     override fun onMapError(error: String) {}
                     override fun onMapReady(olaMap: OlaMap) {
                         olaMap.showCurrentLocation()
+                        olaMap.updateMapUiSettings(
+                            MapControlSettings.Builder()
+                                .setCompassEnabled(false)
+                                .build()
+                        )
                     }
                 }
             )
@@ -83,17 +96,33 @@ fun OlaMapView() {
 }
 
 @Composable
-fun ChangeStatusView() {
+fun ChangeStatusView(modifier: Modifier) {
+    val locationPermissions = arrayOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+    )
+    val notificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.POST_NOTIFICATIONS
+    } else {
+        ""
+    }
+
+    val allPermissions = if (notificationPermission.isNotEmpty()) {
+        locationPermissions.plus(notificationPermission)
+    } else {
+        locationPermissions
+    }
+
     val context = LocalContext.current
     val activity = LocalActivity.current
 
     val onlineStatus by LocationService.isServiceRunning.collectAsStateWithLifecycle()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var showPermissionDialog by remember { mutableStateOf(false) }
+    var shouldShowCommonRationalDialog by remember { mutableStateOf(false) }
+    var shouldShowLocationRationalDialog by remember { mutableStateOf(false) }
     var showOverlayPermissionDialog by remember { mutableStateOf(!Settings.canDrawOverlays(context)) }
     var showLocationProviderDialog by remember { mutableStateOf(false) }
-    val hasNotificationPermission by remember { mutableStateOf(context.hasNotificationPermission()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -113,7 +142,13 @@ fun ChangeStatusView() {
             } else if (permissionsMap.any { (permission, _) ->
                 activity?.shouldShowRequestPermissionRationale(permission) == true
             }) {
-                showPermissionDialog = true
+                if (permissionsMap.any { (permission, granted) ->
+                    permission == notificationPermission && !granted && activity?.shouldShowRequestPermissionRationale(permission) == true
+                }) {
+                    shouldShowCommonRationalDialog = true
+                } else {
+                    shouldShowLocationRationalDialog = true
+                }
             } else if (permissionsMap.all { (permission, granted) ->
                 !granted && activity?.shouldShowRequestPermissionRationale(permission) == false
             }) {
@@ -142,22 +177,36 @@ fun ChangeStatusView() {
         )
     }
 
-    if (showPermissionDialog) {
+    if (shouldShowLocationRationalDialog) {
         PartnerAlertDialog(
             title = "Give permissions",
-            text = "For getting your current location you need to give location permission.",
+            text = "We need location access to track your location. Please grant permission.",
             okButtonText = "OK",
             onOkClick = {
                 permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
+                    allPermissions
                 )
-                showPermissionDialog = false
+                shouldShowCommonRationalDialog = false
             },
             onDismiss = {
-                showPermissionDialog = false
+                shouldShowCommonRationalDialog = false
+            }
+        )
+    }
+
+    if (shouldShowCommonRationalDialog) {
+        PartnerAlertDialog(
+            title = "Give permissions",
+            text = "We need location access to track your location and notification access to show location service is running. Please grant both permissions.",
+            okButtonText = "OK",
+            onOkClick = {
+                permissionLauncher.launch(
+                    allPermissions
+                )
+                shouldShowCommonRationalDialog = false
+            },
+            onDismiss = {
+                shouldShowCommonRationalDialog = false
             }
         )
     }
@@ -165,7 +214,7 @@ fun ChangeStatusView() {
     if (showSettingsDialog) {
         PartnerAlertDialog(
             title = "Give permissions",
-            text = "For getting your current location you need to give location permission.",
+            text = "For working app correctly you need to give permissions. Please give permissions in the next screen.",
             okButtonText = "OK",
             onOkClick = {
                 showSettingsDialog = false
@@ -197,7 +246,7 @@ fun ChangeStatusView() {
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .background(
                 if (onlineStatus) {
                     Color.Green
@@ -206,25 +255,38 @@ fun ChangeStatusView() {
                 },
                 shape = RoundedCornerShape(25.dp)
             )
-            .clickable {
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
-            }
             .zIndex(1f),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text =  if (onlineStatus) "GO OFFLINE" else "GO ONLINE",
-            fontSize = 18.sp,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
+        Row(
             modifier = Modifier
-                .padding(top = 20.dp, bottom = 20.dp, start = 15.dp, end = 15.dp)
-                .align(Alignment.Center)
-        )
+                .padding(top = 8.dp, bottom = 8.dp, start = 15.dp, end = 15.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(
+                space = 10.dp
+            )
+        ) {
+            Switch(
+                checked = onlineStatus,
+                onCheckedChange = {
+                    permissionLauncher.launch(
+                        allPermissions
+                    )
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFF00C853),
+                    checkedTrackColor = Color(0xFFB2FF59),
+                    uncheckedThumbColor = Color(0xFFD32F2F),
+                    uncheckedTrackColor = Color(0xFFFF8A80)
+                )
+            )
+
+            Text(
+                text =  if (onlineStatus) "GO OFFLINE" else "GO ONLINE",
+                fontSize = 18.sp,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
