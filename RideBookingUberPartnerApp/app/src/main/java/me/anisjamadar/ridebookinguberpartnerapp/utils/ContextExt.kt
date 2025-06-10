@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import android.view.WindowManager
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 
 fun Context.hasLocationPermission(): Boolean {
@@ -21,12 +20,15 @@ fun Context.hasLocationPermission(): Boolean {
             ) == PackageManager.PERMISSION_GRANTED
 }
 
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 fun Context.hasNotificationPermission(): Boolean {
-    return ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.POST_NOTIFICATIONS
-    ) == PackageManager.PERMISSION_GRANTED
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
 }
 
 fun Activity.wakeUpWhenLock() {

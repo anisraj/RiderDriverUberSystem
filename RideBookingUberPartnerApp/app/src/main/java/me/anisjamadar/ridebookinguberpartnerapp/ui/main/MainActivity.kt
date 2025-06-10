@@ -2,21 +2,15 @@ package me.anisjamadar.ridebookinguberpartnerapp.ui.main
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.app.ActivityCompat
 import dagger.hilt.android.AndroidEntryPoint
 import me.anisjamadar.ridebookinguberpartnerapp.data.model.AddressType
 import me.anisjamadar.ridebookinguberpartnerapp.ui.base.PartnerNavHost
 import me.anisjamadar.ridebookinguberpartnerapp.ui.base.Route
-import me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup.BookingPopupActivity
-import me.anisjamadar.ridebookinguberpartnerapp.ui.booking_popup.BookingPopupActivity.Companion
 import me.anisjamadar.ridebookinguberpartnerapp.ui.theme.LocationSharingApplicationTheme
 
 @AndroidEntryPoint
@@ -85,17 +79,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-
-
-        if (!Settings.canDrawOverlays(this)) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:" + this.packageName)
-            )
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-        }
 
         if (forStatusChange) {
             viewModel.ridePickupLatitude.value = ridePickupLatitude
