@@ -68,8 +68,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(libs.accompanist.permissions)
-
     //OlaMap SDK
     implementation(files("libs/OlaMapSdk-1.6.0.aar"))
     implementation(files("libs/Places-sdk-2.3.9.jar"))

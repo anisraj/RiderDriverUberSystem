@@ -16,10 +16,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import me.anisjamadar.ridebookinguberpartnerapp.utils.hasLocationPermission
 import me.anisjamadar.ridebookinguberpartnerapp.utils.hasNotificationPermission
 import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class DefaultLocationClient(
     private val context: Context,
@@ -73,7 +73,7 @@ class DefaultLocationClient(
 
     @SuppressLint("MissingPermission")
     override suspend fun getCurrentLocation(): Location {
-        return suspendCancellableCoroutine { continuation ->
+        return suspendCoroutine { continuation ->
             if (!context.hasLocationPermission()) {
                 throw IllegalStateException("Missing location permission")
             }

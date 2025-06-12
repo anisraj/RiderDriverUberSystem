@@ -1,5 +1,6 @@
 package me.anisjamadar.ridebookinguberriderapp.ui.main
 
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.utils.PolylineUtils
@@ -25,11 +26,14 @@ import me.anisjamadar.grpc.GrpcHandler
 import me.anisjamadar.grpc.flows.FlowOfLocationResponse
 import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
 import me.anisjamadar.ridebookinguberriderapp.data.repository.RiderRepository
+import me.anisjamadar.ridebookinguberriderapp.ui.map_screen.FOR_PICKUP
+import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val repository: RiderRepository
+    private val repository: RiderRepository,
+    private val locationClient: LocationClient
 ) : ViewModel() {
     private val _pickupLocation = MutableStateFlow<LocationData?>(null)
     val pickupLocation: StateFlow<LocationData?> = _pickupLocation.asStateFlow()
@@ -45,6 +49,9 @@ class MainViewModel @Inject constructor(
 
     private val _loadingTrigger = MutableStateFlow(false)
     val loadingTrigger: StateFlow<Boolean> = _loadingTrigger.asStateFlow()
+
+    private val _currentLocation = MutableStateFlow<OlaLatLng?>(null)
+    val currentLocation: StateFlow<OlaLatLng?> = _currentLocation.asStateFlow()
 
     init {
         fetchEncodedPolyline()
@@ -141,6 +148,41 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun getCurrentLocation() {
+        viewModelScope.launch {
+            runCatching {
+                locationClient.getCurrentLocation()
+            }.onSuccess {
+                _currentLocation.value = OlaLatLng(
+                    it.latitude,
+                    it.longitude
+                )
+            }
+        }
+    }
+
+    fun fetchPickupAddress(latlng: String) {
+        viewModelScope.launch {
+            repository
+                .getAddressByReverseGeocode(latlng)
+                .catch {
+                    it.printStackTrace()
+                }
+                .collect {
+                    if (it.geometry?.location?.lat != null && it.geometry?.location?.lng != null) {
+                        updatePickupLocation(
+                            LocationData(
+                                locationFor = FOR_PICKUP,
+                                address = it.name,
+                                latitude = it.geometry?.location?.lat,
+                                longitude = it.geometry?.location?.lng
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
     fun reset() {
         _pickupLocation.value = null
         _dropLocation.value = null
@@ -148,6 +190,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _rideBookingEnabled.emit(false)
         }
+        getCurrentLocation()
     }
 
     private suspend fun Flow<String?>.executePolylineFlow() {

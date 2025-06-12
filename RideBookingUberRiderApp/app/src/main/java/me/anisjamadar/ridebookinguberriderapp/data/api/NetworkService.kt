@@ -1,6 +1,7 @@
 package me.anisjamadar.ridebookinguberriderapp.data.api
 
 import com.ola.maps.sdk.model.directions.response.DirectionsResponse
+import com.ola.maps.sdk.model.reversegeocode.response.ReverseGeocodingResponse
 import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.data.model.DistanceMatrixResponse
 import retrofit2.http.GET
@@ -19,4 +20,8 @@ interface NetworkService {
     suspend fun getDistanceMatrix(@Query("origins") origin: String,
                                   @Query("destinations") destination: String,
                                   @Query("api_key") apiKey: String = BuildConfig.API_KEY): DistanceMatrixResponse
+
+    @GET("/places/v1/reverse-geocode")
+    suspend fun getAddressByReverseGeocode(@Query("latlng") latlng: String,
+                                           @Query("api_key") apiKey: String = BuildConfig.API_KEY): ReverseGeocodingResponse
 }

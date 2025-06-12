@@ -1,16 +1,20 @@
 package me.anisjamadar.ridebookinguberriderapp.di.module
 
+import android.content.Context
 import android.util.Log
+import com.google.android.gms.location.LocationServices
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.data.api.NetworkService
 import me.anisjamadar.ridebookinguberriderapp.di.BaseClient
 import me.anisjamadar.ridebookinguberriderapp.di.BaseUrl
 import me.anisjamadar.ridebookinguberriderapp.di.LoggingInterceptor
+import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -66,5 +70,16 @@ class ApplicationModule {
             .addConverterFactory(gsonConverterFactory)
             .build()
             .create(NetworkService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLocationClient(
+        @ApplicationContext context: Context
+    ): LocationClient {
+        return LocationClient(
+            context,
+            LocationServices.getFusedLocationProviderClient(context)
+        )
     }
 }

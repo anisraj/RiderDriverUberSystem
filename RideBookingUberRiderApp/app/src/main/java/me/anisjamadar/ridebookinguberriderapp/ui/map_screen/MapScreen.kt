@@ -1,6 +1,14 @@
 package me.anisjamadar.ridebookinguberriderapp.ui.map_screen
 
-import android.annotation.SuppressLint
+import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.location.LocationManager
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +39,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,13 +50,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.android.gms.location.LocationServices
 import com.ola.mapsdk.camera.OlaCameraUpdate
 import com.ola.mapsdk.interfaces.OlaMapCallback
 import com.ola.mapsdk.model.OlaLatLng
@@ -60,11 +65,10 @@ import com.ola.mapsdk.view.Marker
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
 import com.ola.mapsdk.view.Polyline
-import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant.COUNTDOWN_TIME_IN_SECONDS
 import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.R
-import me.anisjamadar.ridebookinguberriderapp.data.model.LocationData
+import me.anisjamadar.ridebookinguberriderapp.ui.base.RiderAlertDialog
 import me.anisjamadar.ridebookinguberriderapp.ui.base.ShowLoading
 import me.anisjamadar.ridebookinguberriderapp.ui.main.MainViewModel
 import me.anisjamadar.ridebookinguberriderapp.utils.AcceptedRideStatus
@@ -72,14 +76,14 @@ import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversBusyStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.AllDriversOfflineStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.ArrivedAtPickupStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.CompletedRideStatus
-import me.anisjamadar.ridebookinguberriderapp.utils.LocationClient
 import me.anisjamadar.ridebookinguberriderapp.utils.RejectedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.RequestedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.StartedRideStatus
 import me.anisjamadar.ridebookinguberriderapp.utils.UnknownRideStatus
+import me.anisjamadar.ridebookinguberriderapp.utils.hasLocationPermission
+import me.anisjamadar.ridebookinguberriderapp.utils.isLocationEnabled
 import kotlin.math.abs
 import kotlin.math.atan
-
 
 @Composable
 fun MapScreen(
@@ -148,7 +152,6 @@ fun MapScreen(
 
 }
 
-@SuppressLint("MissingPermission")
 @Composable
 fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
     val context = LocalContext.current
@@ -165,6 +168,10 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
 
     var isMapReady by remember { mutableStateOf(false) }
 
+    var showLocationProviderDialog by remember { mutableStateOf(false) }
+    var showCurrentLocation by remember { mutableStateOf(true) }
+    val currentLocation by mainViewModel.currentLocation.collectAsStateWithLifecycle()
+
     val mapView by remember {
         mutableStateOf(OlaMapView(context).also {
             it.getMap(
@@ -173,7 +180,7 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
                     override fun onMapError(error: String) {}
                     override fun onMapReady(olaMap: OlaMap) {
                         map = olaMap
-                        map?.showCurrentLocation()
+                        olaMap.showCurrentLocation()
                         isMapReady = true
                     }
                 }
@@ -181,9 +188,86 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
         })
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissionsMap ->
+            if (permissionsMap.all { (_, granted) ->
+                    granted
+            }) {
+                if (!context.isLocationEnabled()) {
+                    showLocationProviderDialog = true
+                } else {
+                    mainViewModel.getCurrentLocation()
+                }
+            }
+        }
+    )
+
+    LaunchedEffect(currentLocation) {
+        if (showCurrentLocation && isMapReady) {
+            currentLocation?.let {
+                mainViewModel.fetchPickupAddress("${it.latitude},${it.longitude}")
+                map?.moveCameraToLatLong(
+                    olaLatLng = OlaLatLng(it.latitude, it.longitude),
+                    zoomLevel = 15.5,
+                    durationMs = 1000
+                )
+            }
+            showCurrentLocation = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            )
+        )
+    }
+
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(p0: Context?, intent: Intent?) {
+                if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
+                    val isLocationEnabled = context.isLocationEnabled()
+                    val hasLocationPermission = context.hasLocationPermission()
+                    if (hasLocationPermission && isLocationEnabled) {
+                        mainViewModel.getCurrentLocation()
+                    }
+                }
+            }
+        }
+
+        val filter = IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION)
+        context.registerReceiver(receiver, filter)
+
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) { }
+        }
+    }
+
+    if (showLocationProviderDialog) {
+        RiderAlertDialog(
+            title = "Enable GPS",
+            text = "GPS is disabled, to show your location on map you need to enable GPS.",
+            okButtonText = "OK",
+            onOkClick = {
+                showLocationProviderDialog = false
+                context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            },
+            onDismiss = {
+                showLocationProviderDialog = false
+            }
+        )
+    }
+
     val polylineData by mainViewModel.polyline.collectAsStateWithLifecycle()
     LaunchedEffect(polylineData, isMapReady) {
         if (polylineData.isNotEmpty()) {
+            showCurrentLocation = false
             polyline?.removePolyline()
             pickupMarker?.removeMarker()
             dropMarker?.removeMarker()
@@ -234,6 +318,7 @@ fun OlaMapView(mainViewModel: MainViewModel, viewModel: MapScreenViewModel) {
             polyline?.removePolyline()
             pickupMarker?.removeMarker()
             dropMarker?.removeMarker()
+            showCurrentLocation = true
         }
     }
 

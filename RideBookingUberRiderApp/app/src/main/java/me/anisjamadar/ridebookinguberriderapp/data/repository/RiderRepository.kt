@@ -1,5 +1,7 @@
 package me.anisjamadar.ridebookinguberriderapp.data.repository
 
+import com.ola.maps.sdk.model.reversegeocode.response.Results
+import com.ola.maps.sdk.model.reversegeocode.response.ReverseGeocodingResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -26,6 +28,14 @@ class RiderRepository @Inject constructor(
             emit(networkService.getDistanceMatrix(origin, destination))
         }.map {
             ((it.rows?.first()?.elements?.first()?.distance ?: 0.0) / 1000).round(2)
+        }
+    }
+
+    fun getAddressByReverseGeocode(latlng: String): Flow<Results> {
+        return flow {
+            emit(networkService.getAddressByReverseGeocode(latlng))
+        }.map {
+            it.results.first()
         }
     }
 }
