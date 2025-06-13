@@ -3,11 +3,16 @@ package me.anisjamadar.grpc
 import com.google.protobuf.Empty
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant.COUNTDOWN_TIME_IN_SECONDS
 import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
@@ -15,13 +20,12 @@ import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
 import me.anisjamadar.grpc.flows.FlowOfBookingResponse
 import me.anisjamadar.grpc.flows.FlowOfLocationResponse
 import rider.Rider.DriverLocationResponse
-import rider.Rider.RideRequest
-import rider.Rider.RideResponse
-import rider.RiderServiceGrpc
+import rider.RiderServiceGrpcKt
+import rider.rideRequest
 
 object GrpcHandler {
     private var managedChannel: ManagedChannel? = null
-    private lateinit var riderServiceGrpcStub: RiderServiceGrpc.RiderServiceStub
+    private lateinit var riderServiceCoroutineStub: RiderServiceGrpcKt.RiderServiceCoroutineStub
     private lateinit var scope: CoroutineScope
 
     fun startGrpc() {
@@ -30,9 +34,10 @@ object GrpcHandler {
             managedChannel = ManagedChannelBuilder
                 .forAddress(GRPC_HOST, GRPC_PORT)
                 .usePlaintext()
+                .executor(Dispatchers.IO.asExecutor())
                 .build()
         }
-        riderServiceGrpcStub = RiderServiceGrpc.newStub(managedChannel)
+        riderServiceCoroutineStub = RiderServiceGrpcKt.RiderServiceCoroutineStub(managedChannel!!)
     }
 
     fun sendRideRequest(
@@ -41,55 +46,37 @@ object GrpcHandler {
         pickupAddress: String, dropAddress: String,
         distanceInKm: Double
     ) {
-        val request = RideRequest.newBuilder()
-            .setTime(COUNTDOWN_TIME_IN_SECONDS)
-            .setPickupLatitude(pickupLatitude)
-            .setPickupLongitude(pickupLongitude)
-            .setDropLatitude(dropLatitude)
-            .setDropLongitude(dropLongitude)
-            .setPickupAddress(pickupAddress)
-            .setDropAddress(dropAddress)
-            .setDistanceInKm(distanceInKm)
-            .build()
-
-        val responseObserver = object : StreamObserver<RideResponse> {
-            override fun onNext(value: RideResponse) {
-                scope.launch {
-                    FlowOfBookingResponse.emitBooking(value.action)
-                }
-                println("Driver action: ${value.action}")
-            }
-
-            override fun onError(t: Throwable?) {
-
-            }
-
-            override fun onCompleted() {
-
-            }
+        val request = rideRequest {
+            this.time = COUNTDOWN_TIME_IN_SECONDS
+            this.pickupLatitude = pickupLatitude
+            this.pickupLongitude = pickupLongitude
+            this.dropLatitude = dropLatitude
+            this.dropLongitude = dropLongitude
+            this.pickupAddress = pickupAddress
+            this.dropAddress = dropAddress
+            this.distanceInKm = distanceInKm
         }
 
-        riderServiceGrpcStub.requestRide(request, responseObserver)
+        scope.launch {
+            riderServiceCoroutineStub
+                .requestRide(request)
+                .catch {
+                    it.printStackTrace()
+                }
+                .collect {
+                    FlowOfBookingResponse.emitBooking(it.action)
+                }
+        }
     }
 
     fun getDriverLocationUpdates() {
-        val responseObserver = object : StreamObserver<DriverLocationResponse> {
-            override fun onNext(value: DriverLocationResponse) {
-                scope.launch {
-                    FlowOfLocationResponse.emitLocationUpdates(value.latitude, value.longitude)
+        scope.launch {
+            riderServiceCoroutineStub
+                .driverLocation(Empty.getDefaultInstance())
+                .collect {
+                    FlowOfLocationResponse.emitLocationUpdates(it.latitude, it.longitude)
                 }
-            }
-
-            override fun onError(t: Throwable?) {
-
-            }
-
-            override fun onCompleted() {
-
-            }
         }
-
-        riderServiceGrpcStub.driverLocation(Empty.getDefaultInstance(), responseObserver)
     }
 
     fun stopGrpc() {

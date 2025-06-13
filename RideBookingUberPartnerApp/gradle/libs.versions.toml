@@ -22,6 +22,11 @@ maplibrAndroidPluginAnnotation = "1.0.0"
 maplibrMarkerviewPluginAnnotation = "1.0.0"
 maplibreSdk = "10.0.2"
 lifecycle = "2.8.7"
+protobufKotlinLite = "3.24.4"
+grpcKotlinStub = "1.4.3"
+grpcOkhttp = "1.62.2"
+grpcProtobuff = "1.62.2"
+kotlinxCoroutinesCore = "1.8.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +59,11 @@ maplibre-sdk = { group = "org.maplibre.gl", name = "android-sdk", version.ref = 
 maplibre-android-plugin-annotation = { group = "org.maplibre.gl", name = "android-plugin-annotation-v9", version.ref = "maplibrAndroidPluginAnnotation" }
 maplibre-markerview-plugin-annotation = { group = "org.maplibre.gl", name = "android-plugin-markerview-v9", version.ref = "maplibrMarkerviewPluginAnnotation" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version.ref = "grpcKotlinStub" }
+grpc-okhttp = { module = "io.grpc:grpc-okhttp", version.ref = "grpcOkhttp" }
+grpc-protobuf-lite = { module = "io.grpc:grpc-protobuf-lite", version.ref = "grpcProtobuff" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobufKotlinLite" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,17 +1,19 @@
 package me.anisjamadar.grpc
 
 import driver.Driver.LocationRequest
-import driver.Driver.LocationResponse
 import driver.Driver.NewJobRequest
 import driver.Driver.NewJobResponse
-import driver.DriverServiceGrpc
+import driver.DriverServiceGrpcKt
+import driver.locationRequest
+import driver.newJobRequest
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
 import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
@@ -20,9 +22,10 @@ import me.anisjamadar.grpc.model.BookingData
 
 object GrpcHandler {
     private var managedChannel: ManagedChannel? = null
-    private lateinit var driverServiceGrpcStub: DriverServiceGrpc.DriverServiceStub
-    private var locationRequestStreamObserver: StreamObserver<LocationRequest>? = null
-    private var newJobRequestStreamObserver: StreamObserver<NewJobRequest>? = null
+
+    private lateinit var driverServiceCoroutineStub: DriverServiceGrpcKt.DriverServiceCoroutineStub
+    private val locationRequestFlow = MutableSharedFlow<LocationRequest>(replay = 0)
+    private val newJobRequestFlow = MutableSharedFlow<NewJobRequest>(replay = 0)
 
     private lateinit var scope: CoroutineScope
 
@@ -32,74 +35,54 @@ object GrpcHandler {
             managedChannel = ManagedChannelBuilder
                 .forAddress(GRPC_HOST, GRPC_PORT)
                 .usePlaintext()
+                .executor(Dispatchers.IO.asExecutor())
                 .build()
         }
-        println("APP_TAG - startService: managedChannel = ${managedChannel?.getState(false)}")
-        driverServiceGrpcStub = DriverServiceGrpc.newStub(managedChannel)
+        driverServiceCoroutineStub = DriverServiceGrpcKt.DriverServiceCoroutineStub(managedChannel!!)
         observeResponse()
         onBookingArrived()
     }
 
     fun stopService() {
         scope.cancel()
-        locationRequestStreamObserver?.onCompleted()
         managedChannel?.shutdown()
-        locationRequestStreamObserver = null
-        newJobRequestStreamObserver?.onCompleted()
-        newJobRequestStreamObserver = null
         managedChannel = null
     }
 
-    fun sendLocationUpdates(latitude: Double, longitude: Double) {
-        locationRequestStreamObserver?.onNext(LocationRequest
-            .newBuilder()
-            .setLatitude(latitude)
-            .setLongitude(longitude)
-            .build()
-        )
+    suspend fun sendLocationUpdates(latitude: Double, longitude: Double) {
+        locationRequestFlow
+            .emit(
+                locationRequest {
+                    this.latitude = latitude
+                    this.longitude = longitude
+                }
+            )
     }
 
     private fun observeResponse() {
-        locationRequestStreamObserver = driverServiceGrpcStub.driverLocation(object : StreamObserver<LocationResponse> {
-            override fun onNext(value: LocationResponse?) {
-                println("APP_TAG - response on next $value")
-            }
-
-            override fun onError(t: Throwable?) {
-                println("APP_TAG - response on error ${t?.localizedMessage} ")
-            }
-
-            override fun onCompleted() {
-                println("APP_TAG - response on complete ")
-            }
-        })
+        scope.launch {
+            driverServiceCoroutineStub
+                .driverLocation(locationRequestFlow)
+                .collect {
+                    println("APP_TAG - response $it")
+                }
+        }
     }
 
-    fun updateRideStatus(action: Int) {
-        newJobRequestStreamObserver?.onNext(NewJobRequest
-            .newBuilder()
-            .setAction(action)
-            .build()
-        )
+    suspend fun updateRideStatus(action: Int) {
+        newJobRequestFlow.emit(newJobRequest { this.action = action })
     }
 
     private fun onBookingArrived() {
-        newJobRequestStreamObserver = driverServiceGrpcStub.driverNewJob(object : StreamObserver<NewJobResponse> {
-            override fun onNext(value: NewJobResponse?) {
-                if (value?.action == 1) {
-                    handleBooking(value)
+        scope.launch {
+            driverServiceCoroutineStub
+                .driverNewJob(newJobRequestFlow)
+                .collect {
+                    if (it.action == 1) {
+                        handleBooking(it)
+                    }
                 }
-                println("APP_TAG - response on next $value")
-            }
-
-            override fun onError(t: Throwable?) {
-
-            }
-
-            override fun onCompleted() {
-
-            }
-        })
+        }
     }
 
     private fun handleBooking(value: NewJobResponse) {

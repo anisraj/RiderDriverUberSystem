@@ -35,11 +35,14 @@ android {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.19.2"
+        artifact = "com.google.protobuf:protoc:3.25.3"
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.47.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.62.2"
+        }
+        create("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.3:jdk8@jar"
         }
     }
     generateProtoTasks {
@@ -49,8 +52,18 @@ protobuf {
                     option("lite")
                 }
             }
+            task.builtins {
+                maybeCreate("kotlin").apply {
+                    option("lite")
+                }
+            }
             task.plugins {
                 maybeCreate("grpc").apply {
+                    option("lite")
+                }
+            }
+            task.plugins {
+                maybeCreate("grpckt").apply {
                     option("lite")
                 }
             }
@@ -59,9 +72,11 @@ protobuf {
 }
 
 dependencies {
-    implementation("io.grpc:grpc-okhttp:1.47.0")
-    implementation("io.grpc:grpc-protobuf-lite:1.47.0")
-    implementation("io.grpc:grpc-stub:1.47.0")
-    implementation("org.apache.tomcat:annotations-api:6.0.53")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation(libs.grpc.okhttp)
+
+    implementation(libs.grpc.protobuf.lite)
+    implementation(libs.grpc.kotlin.stub)
+    implementation(libs.protobuf.kotlin.lite)
+
+    implementation(libs.kotlinx.coroutines.core)
 }

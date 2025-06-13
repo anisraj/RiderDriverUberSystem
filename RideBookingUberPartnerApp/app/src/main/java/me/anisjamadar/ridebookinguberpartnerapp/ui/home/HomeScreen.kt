@@ -9,7 +9,6 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,7 +20,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,24 +29,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.ola.mapsdk.camera.MapControlSettings
 import com.ola.mapsdk.interfaces.OlaMapCallback
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
 import me.anisjamadar.locationsharingapplication.BuildConfig
 import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.LocationService
 import me.anisjamadar.ridebookinguberpartnerapp.utils.PartnerAlertDialog
-import me.anisjamadar.ridebookinguberpartnerapp.utils.hasLocationPermission
-import me.anisjamadar.ridebookinguberpartnerapp.utils.hasNotificationPermission
 import me.anisjamadar.ridebookinguberpartnerapp.utils.isLocationEnabled
 
 @Composable
@@ -79,11 +70,6 @@ fun OlaMapView() {
                     override fun onMapError(error: String) {}
                     override fun onMapReady(olaMap: OlaMap) {
                         olaMap.showCurrentLocation()
-                        olaMap.updateMapUiSettings(
-                            MapControlSettings.Builder()
-                                .setCompassEnabled(false)
-                                .build()
-                        )
                     }
                 }
             )
