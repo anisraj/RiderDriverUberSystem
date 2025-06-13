@@ -31,6 +31,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -65,7 +67,10 @@ import com.ola.mapsdk.view.Marker
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
 import com.ola.mapsdk.view.Polyline
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import me.anisjamadar.grpc.GrpcConstant.COUNTDOWN_TIME_IN_SECONDS
+import me.anisjamadar.grpc.flows.FlowServerUnavailable
 import me.anisjamadar.ridebookinguberriderapp.BuildConfig
 import me.anisjamadar.ridebookinguberriderapp.R
 import me.anisjamadar.ridebookinguberriderapp.ui.base.RiderAlertDialog
@@ -94,11 +99,26 @@ fun MapScreen(
     val rideStatus by viewModel.rideStatus.collectAsStateWithLifecycle()
     val loadingTrigger by mainViewModel.loadingTrigger.collectAsStateWithLifecycle()
 
+    val snackBarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(Unit) {
         viewModel.startObservingLocationUpdates()
     }
 
-    Scaffold { padding ->
+    LaunchedEffect(Unit) {
+        FlowServerUnavailable.serverUnavailableFlow
+            .collect {
+                snackBarHostState.showSnackbar(
+                    message = it.localizedMessage ?: "Some Error"
+                )
+            }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState)
+        },
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()

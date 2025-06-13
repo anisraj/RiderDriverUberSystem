@@ -16,10 +16,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ola.mapsdk.interfaces.OlaMapCallback
 import com.ola.mapsdk.view.OlaMap
 import com.ola.mapsdk.view.OlaMapView
+import me.anisjamadar.grpc.flows.FlowServerUnavailable
 import me.anisjamadar.locationsharingapplication.BuildConfig
 import me.anisjamadar.ridebookinguberpartnerapp.data.location_tracking.LocationService
 import me.anisjamadar.ridebookinguberpartnerapp.utils.PartnerAlertDialog
@@ -44,7 +48,27 @@ import me.anisjamadar.ridebookinguberpartnerapp.utils.isLocationEnabled
 
 @Composable
 fun HomeScreen() {
-    Scaffold { padding ->
+    val context = LocalContext.current
+    val snackBarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(Unit) {
+        FlowServerUnavailable.serverUnavailableFlow
+            .collect {
+                snackBarHostState.showSnackbar(
+                    message = it.localizedMessage ?: "Some Error"
+                )
+                if (LocationService.isServiceRunning.value) {
+                    Intent(context, LocationService::class.java).apply {
+                        context.startService(this)
+                    }
+                }
+            }
+    }
+
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState)
+        },
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize(),

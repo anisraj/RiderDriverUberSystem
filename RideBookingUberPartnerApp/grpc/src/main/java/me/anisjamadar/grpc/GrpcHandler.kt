@@ -8,16 +8,20 @@ import driver.locationRequest
 import driver.newJobRequest
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
+import io.grpc.Status
+import io.grpc.StatusException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
 import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
 import me.anisjamadar.grpc.flows.FlowBookingAcknowledge
+import me.anisjamadar.grpc.flows.FlowServerUnavailable
 import me.anisjamadar.grpc.model.BookingData
 
 object GrpcHandler {
@@ -63,6 +67,12 @@ object GrpcHandler {
         scope.launch {
             driverServiceCoroutineStub
                 .driverLocation(locationRequestFlow)
+                .catch {
+                    if (it is StatusException && it.status.code == Status.Code.UNAVAILABLE) {
+                        FlowServerUnavailable.emitException(Throwable("gRPC server is not running"))
+                    }
+                    it.printStackTrace()
+                }
                 .collect {
                     println("APP_TAG - response $it")
                 }
@@ -77,6 +87,9 @@ object GrpcHandler {
         scope.launch {
             driverServiceCoroutineStub
                 .driverNewJob(newJobRequestFlow)
+                .catch {
+                    it.printStackTrace()
+                }
                 .collect {
                     if (it.action == 1) {
                         handleBooking(it)

@@ -3,6 +3,8 @@ package me.anisjamadar.grpc
 import com.google.protobuf.Empty
 import io.grpc.ManagedChannel
 import io.grpc.ManagedChannelBuilder
+import io.grpc.Status
+import io.grpc.StatusException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +21,7 @@ import me.anisjamadar.grpc.GrpcConstant.GRPC_HOST
 import me.anisjamadar.grpc.GrpcConstant.GRPC_PORT
 import me.anisjamadar.grpc.flows.FlowOfBookingResponse
 import me.anisjamadar.grpc.flows.FlowOfLocationResponse
+import me.anisjamadar.grpc.flows.FlowServerUnavailable
 import rider.Rider.DriverLocationResponse
 import rider.RiderServiceGrpcKt
 import rider.rideRequest
@@ -61,6 +64,9 @@ object GrpcHandler {
             riderServiceCoroutineStub
                 .requestRide(request)
                 .catch {
+                    if (it is StatusException && it.status.code == Status.Code.UNAVAILABLE) {
+                        FlowServerUnavailable.emitException(Throwable("gRPC server is not running"))
+                    }
                     it.printStackTrace()
                 }
                 .collect {
@@ -73,6 +79,9 @@ object GrpcHandler {
         scope.launch {
             riderServiceCoroutineStub
                 .driverLocation(Empty.getDefaultInstance())
+                .catch {
+                    it.printStackTrace()
+                }
                 .collect {
                     FlowOfLocationResponse.emitLocationUpdates(it.latitude, it.longitude)
                 }
